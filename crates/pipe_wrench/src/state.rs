@@ -551,6 +551,8 @@ pub struct SessionState {
     pub preferences_error: Option<String>,
     /// Whether the Keyboard Shortcuts reference modal is open (`NFR-6`).
     pub shortcuts_help_open: bool,
+    /// Whether the About `pipe_wrench` modal dialog is open.
+    pub about_open: bool,
     /// Headless Directory Scan window state (`SCAN-1..SCAN-15`).
     pub scan_window: DirectoryScanWindowState,
     /// Layout mode of the Unified Record Detail Area (`D-26`).
@@ -716,6 +718,7 @@ impl SessionState {
             new_filter_pattern_input: String::new(),
             preferences_error: None,
             shortcuts_help_open: false,
+            about_open: false,
             scan_window: DirectoryScanWindowState::default(),
             detail_view_mode: DetailViewMode::Split,
             detail_raw_split_height: 190.0,

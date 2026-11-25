@@ -57,6 +57,8 @@ pub struct PipeWrenchApp {
     cached_memory_budget: MemoryBudget,
     /// Last timestamp when `cached_memory_budget` was refreshed from the OS.
     last_memory_refresh: std::time::Instant,
+    /// Lazily cached procedural app icon texture for the About modal header.
+    about_icon_texture: Option<egui::TextureHandle>,
 }
 
 impl Default for PipeWrenchApp {
@@ -80,6 +82,7 @@ impl PipeWrenchApp {
             screenshot_capture: None,
             cached_memory_budget: MemoryBudget::from_system(),
             last_memory_refresh: std::time::Instant::now(),
+            about_icon_texture: None,
         }
     }
 
@@ -138,6 +141,7 @@ impl PipeWrenchApp {
             }),
             cached_memory_budget: MemoryBudget::from_system(),
             last_memory_refresh: std::time::Instant::now(),
+            about_icon_texture: None,
         }
     }
 
@@ -371,7 +375,9 @@ impl PipeWrenchApp {
         } else if ctx.input_mut(|i| i.consume_shortcut(&find_sc)) && has_messages {
             self.state.open_find_panel();
         }
-        if self.state.search_bar_open && ctx.input(|i| i.key_pressed(Key::Escape)) {
+        if self.state.about_open && ctx.input(|i| i.key_pressed(Key::Escape)) {
+            self.state.about_open = false;
+        } else if self.state.search_bar_open && ctx.input(|i| i.key_pressed(Key::Escape)) {
             self.state.close_find_replace_panel();
         }
 
@@ -1100,6 +1106,11 @@ impl PipeWrenchApp {
                     ui.close_menu();
                     self.state.shortcuts_help_open = true;
                 }
+                ui.separator();
+                if icon_menu_button(ui, IconKind::Help, "About pipe_wrench", None, true).clicked() {
+                    ui.close_menu();
+                    self.state.about_open = true;
+                }
             });
         });
     }
@@ -1552,6 +1563,158 @@ impl PipeWrenchApp {
                     }
                 });
             self.state.shortcuts_help_open = open;
+        }
+
+        // About pipe_wrench modal dialog.
+        if self.state.about_open {
+            let palette = ThemePalette::for_visuals(&ctx.style().visuals);
+            let icon_tex = self
+                .about_icon_texture
+                .get_or_insert_with(|| {
+                    let rgba = crate::icon::render_icon_rgba(64);
+                    let image = egui::ColorImage::from_rgba_unmultiplied([64, 64], &rgba);
+                    ctx.load_texture(
+                        "pipe_wrench_about_icon",
+                        image,
+                        egui::TextureOptions::LINEAR,
+                    )
+                })
+                .clone();
+            let trademark_color = if palette.is_dark {
+                egui::Color32::from_rgb(0xB0, 0xB7, 0xC3)
+            } else {
+                egui::Color32::from_rgb(0x4B, 0x55, 0x63)
+            };
+            let version_pill_bg = palette.accent.gamma_multiply(0.16);
+            let version_pill_border = palette.accent.gamma_multiply(0.55);
+            let window_frame =
+                egui::Frame::window(&ctx.style()).inner_margin(egui::Margin::same(18));
+
+            let mut open = self.state.about_open;
+            let mut close_clicked = false;
+            egui::Window::new("About pipe_wrench")
+                .open(&mut open)
+                .collapsible(false)
+                .resizable(false)
+                .frame(window_frame)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(ctx, |ui| {
+                    apply_unified_control_metrics(ui);
+                    ui.set_width(444.0);
+
+                    // Header row: 40×40 icon + title + version badge
+                    ui.horizontal(|ui| {
+                        ui.spacing_mut().item_spacing.x = 12.0;
+                        ui.add(
+                            egui::Image::from_texture(&icon_tex)
+                                .fit_to_exact_size(egui::vec2(40.0, 40.0)),
+                        );
+                        ui.vertical(|ui| {
+                            ui.spacing_mut().item_spacing.y = 4.0;
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing.x = 8.0;
+                                ui.label(
+                                    egui::RichText::new("pipe_wrench")
+                                        .size(19.0)
+                                        .strong()
+                                        .color(palette.primary_text),
+                                );
+                                egui::Frame::NONE
+                                    .fill(version_pill_bg)
+                                    .stroke(egui::Stroke::new(1.0_f32, version_pill_border))
+                                    .corner_radius(egui::CornerRadius::same(4))
+                                    .inner_margin(egui::Margin::symmetric(6, 2))
+                                    .show(ui, |ui| {
+                                        ui.label(
+                                            egui::RichText::new(concat!(
+                                                "v",
+                                                env!("CARGO_PKG_VERSION")
+                                            ))
+                                            .size(13.0)
+                                            .monospace()
+                                            .strong()
+                                            .color(palette.accent),
+                                        );
+                                    });
+                            });
+                            ui.add(
+                                egui::Label::new(
+                                    egui::RichText::new(
+                                        "Desktop and CLI workbench for HL7® v2 interface troubleshooting and conversion.",
+                                    )
+                                    .size(14.0)
+                                    .color(palette.primary_text),
+                                )
+                                .wrap(),
+                            );
+                        });
+                    });
+
+                    ui.add_space(10.0);
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing.x = 6.0;
+                        ui.label(
+                            egui::RichText::new("Repository:")
+                                .size(13.5)
+                                .strong()
+                                .color(palette.primary_text),
+                        );
+                        ui.hyperlink_to(
+                            egui::RichText::new("https://github.com/brett-a-willis/pipe_wrench")
+                                .size(13.5),
+                            "https://github.com/brett-a-willis/pipe_wrench",
+                        );
+                    });
+
+                    ui.add_space(10.0);
+                    ui.separator();
+                    ui.add_space(8.0);
+
+                    ui.add(
+                        egui::Label::new(
+                            egui::RichText::new(
+                                "Copyright (c) 2026 Brett Willis — Licensed under the MIT License. Provided \"AS IS\", without warranty of any kind.",
+                            )
+                            .size(13.5)
+                            .color(palette.primary_text),
+                        )
+                        .wrap(),
+                    );
+                    ui.add_space(8.0);
+                    ui.add(
+                        egui::Label::new(
+                            egui::RichText::new(
+                                "HL7® and Health Level Seven® are registered trademarks of Health Level Seven International. pipe_wrench is an independent utility and is not affiliated with, endorsed, or sponsored by Health Level Seven International.",
+                            )
+                            .size(12.5)
+                            .line_height(Some(18.0))
+                            .color(trademark_color),
+                        )
+                        .wrap(),
+                    );
+
+                    ui.add_space(10.0);
+                    ui.separator();
+                    ui.add_space(8.0);
+
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(ui.available_width(), crate::ui::theme::CONTROL_HEIGHT),
+                        egui::Layout::right_to_left(egui::Align::Center),
+                        |ui| {
+                            ui.style_mut().text_styles.insert(
+                                egui::TextStyle::Button,
+                                egui::FontId::proportional(13.5),
+                            );
+                            if icon_labeled_button(ui, IconKind::Close, "Close", true, None)
+                                .on_hover_text("Close About dialog (Esc)")
+                                .clicked()
+                            {
+                                close_clicked = true;
+                            }
+                        },
+                    );
+                });
+            self.state.about_open = open && !close_clicked;
         }
 
         // Deterministic PHI De-Identification / Export Synthetic modal.
@@ -3573,5 +3736,42 @@ mod tests {
                 app.show_filter_bar(ui);
             });
         });
+    }
+
+    #[test]
+    fn about_modal_renders_and_closes_on_escape() {
+        let mut app = PipeWrenchApp::new();
+        app.state.about_open = true;
+        let ctx = egui::Context::default();
+        let raw_input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::pos2(0.0, 0.0),
+                egui::vec2(1280.0, 800.0),
+            )),
+            ..Default::default()
+        };
+        let _ = ctx.run(raw_input, |ctx| {
+            app.render_frame(ctx);
+        });
+        assert!(app.state.about_open);
+
+        let esc_input = egui::RawInput {
+            screen_rect: Some(egui::Rect::from_min_size(
+                egui::pos2(0.0, 0.0),
+                egui::vec2(1280.0, 800.0),
+            )),
+            events: vec![egui::Event::Key {
+                key: Key::Escape,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: Modifiers::NONE,
+            }],
+            ..Default::default()
+        };
+        let _ = ctx.run(esc_input, |ctx| {
+            app.render_frame(ctx);
+        });
+        assert!(!app.state.about_open);
     }
 }

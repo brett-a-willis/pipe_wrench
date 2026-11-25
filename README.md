@@ -1,6 +1,6 @@
 # pipe_wrench
 
-**A fast, responsive desktop and CLI workbench for HL7 v2 interface troubleshooting and conversion projects.**
+**A fast, responsive desktop and CLI workbench for HL7® v2 (Health Level Seven® Version 2) interface troubleshooting and conversion projects.**
 
 > **⚠️ DISCLAIMER — NO WARRANTY & USE AT YOUR OWN RISK**
 >
@@ -92,3 +92,5 @@ cargo build --release --workspace
 ## License
 
 Licensed under the [MIT License](LICENSE). This is a personal utility shared as-is without active issue tracking or support.
+
+HL7® and Health Level Seven® are registered trademarks of Health Level Seven International. pipe_wrench is an independent utility and is not affiliated with, endorsed, or sponsored by Health Level Seven International.
