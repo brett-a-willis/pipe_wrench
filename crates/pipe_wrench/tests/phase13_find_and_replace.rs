@@ -1,4 +1,4 @@
-//! Phase 13 integration tests covering Notepad++-style Find & Replace (`Ctrl+F` / `Ctrl+H`)
+//! Phase 13 integration tests covering Find & Replace (`Ctrl+F` / `Ctrl+H`)
 //! with granular HL7 v2 field/component/subcomponent targeting (`PID-3.1.4`, `PID-3(2).4`, `OBX-5`),
 //! `Wrap around`, `Match case`, `Match whole value / word`, `Regex` capture-group replacement (`$1`),
 //! single `Replace` + advance, scoped `Replace All` (`CurrentRecord` / `FilteredRecords` / `AllRecords`),

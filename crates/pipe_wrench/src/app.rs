@@ -2617,13 +2617,13 @@ impl PipeWrenchApp {
         }
     }
 
-    /// Render the compact VS Code-style floating Find & Replace overlay anchored to the
+    /// Render the compact floating editor Find & Replace overlay anchored to the
     /// top-right of the main window (`Ctrl+F` collapsed, `Ctrl+H` expanded).
     fn show_floating_find_replace_widget(&mut self, ctx: &Context) {
         let palette = ThemePalette::for_visuals(&ctx.style().visuals);
         let replace_expanded = self.state.find_replace_tab == FindReplaceTab::Replace;
 
-        // Tight, grid-aligned VS Code geometry:
+        // Tight, grid-aligned floating editor geometry:
         // Left chevron (20) + gap (4) + Input box (240) + gap (4) + Right actions (178) = 446 px
         const CHEV_W: f32 = 20.0;
         const INPUT_W: f32 = 240.0;
@@ -2641,7 +2641,7 @@ impl PipeWrenchApp {
 
         let mut clicked_breakdown_path: Option<String> = None;
 
-        egui::Area::new(egui::Id::new("vscode_floating_find_replace"))
+        egui::Area::new(egui::Id::new("floating_find_replace"))
             .order(egui::Order::Foreground)
             .interactable(true)
             .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-12.0, 28.0))

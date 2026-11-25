@@ -5,7 +5,7 @@
 //!    TOML persistence in `AppSettings`).
 //! 3. HL7 escape sequence syntax highlighting (`\F\`, `\.br\`, `\X0D\`) in both Dark and Light
 //!    `EditorPalette` modes.
-//! 4. Notepad++-style Show Control Characters (`¶`) rendering `[CR]`, `[LF]`, `[CR][LF]`, `[VT]`,
+//! 4. Editor Show Control Characters (`¶`) rendering `[CR]`, `[LF]`, `[CR][LF]`, `[VT]`,
 //!    `[FS]`, `·`, and `→` markers cleanly while keeping raw message bytes lossless.
 
 use hl7_core::{Delimiters, SourceTerminator};

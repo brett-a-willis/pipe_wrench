@@ -783,7 +783,7 @@ fn gui_phi_scrub_modals_render_mandatory_best_effort_disclaimer_banner() {
 }
 
 #[test]
-fn vscode_floating_find_replace_widget_collapse_expand_toggles_and_match_navigation() {
+fn floating_find_replace_widget_collapse_expand_toggles_and_match_navigation() {
     use pipe_wrench::app::PipeWrenchApp;
     use pipe_wrench::state::FindReplaceTab;
 

@@ -1,6 +1,6 @@
 //! Dual Dark & Light Modern Developer-Tool Design System (`§5.1`, `NFR-7`, `D-26`).
 //!
-//! Inspired by Zed and VS Code Dark Modern & Light Modern, respecting the user's
+//! Modern Dark & Light editor color palettes, respecting the user's
 //! `System`, `Dark`, and `Light` theme preference everywhere:
 //! - **Dark Mode:** Base canvas `#141519`, side/record panel `#1A1C22`, elevated toolbar/cards `#22252E`,
 //!   hover/selection tint `#2A3140`, hair-thin `1px` dividers `#2B303B`, muted secondary text `#8E96A8`,
@@ -150,7 +150,7 @@ impl ThemePalette {
     }
 }
 
-/// Dual Dark (`VS Code Dark+` `#1E1E1E`) and Light (`VS Code Light+` `#FFFFFF`) syntax-highlighting
+/// Dual Dark (`#1E1E1E`) and Light (`#FFFFFF`) editor syntax-highlighting
 /// palette for the in-place raw HL7 message editor (`D-26`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EditorPalette {
@@ -187,7 +187,7 @@ pub struct EditorPalette {
 }
 
 impl EditorPalette {
-    /// VS Code Dark+ editor palette (`#1E1E1E` background).
+    /// Dark theme editor palette (`#1E1E1E` background).
     pub const DARK_PLUS: Self = Self {
         is_dark: true,
         background: Color32::from_rgb(0x1E, 0x1E, 0x1E),
@@ -206,7 +206,7 @@ impl EditorPalette {
         control_char_bg: Color32::from_rgb(0x2B, 0x30, 0x3B),
     };
 
-    /// VS Code Light+ editor palette (`#FFFFFF` background, WCAG-AA high-contrast tokens).
+    /// Light theme editor palette (`#FFFFFF` background, WCAG-AA high-contrast tokens).
     pub const LIGHT_PLUS: Self = Self {
         is_dark: false,
         background: Color32::from_rgb(0xFF, 0xFF, 0xFF),

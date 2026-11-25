@@ -12,7 +12,7 @@ use crate::scanner::MllpEnvelope;
 static ACK_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 /// Standard HL7 v2 Table 0008 ACK codes for `MSA-1` (Original Mode `AA`/`AE`/`AR` and
-/// Enhanced Mode `CA`/`CE`/`CR` used by Epic Bridges and modern interface engines) (NET-16).
+/// Enhanced Mode `CA`/`CE`/`CR`) (NET-16).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AckCode {
     /// Original Mode: Application Accept (`AA`).
@@ -493,9 +493,9 @@ mod tests {
             );
         }
 
-        // Enhanced Mode (Epic Bridges) CA Commit Accept (with CRLF and optional ERR) -> ACK
+        // Enhanced Mode CA Commit Accept (with CRLF and optional ERR) -> ACK
         let enhanced_ca =
-            b"MSH|^~\\&|EPIC|FAC|SND|FAC|20260101||ACK^A01|ACK2|P|2.5.1\r\nMSA|CA|SENT_ID_100\r\n";
+            b"MSH|^~\\&|RCV|FAC|SND|FAC|20260101||ACK^A01|ACK2|P|2.5.1\r\nMSA|CA|SENT_ID_100\r\n";
         assert_eq!(
             evaluate_ack(enhanced_ca, "SENT_ID_100", &hl7_mode),
             AckResult::Ack
@@ -503,7 +503,7 @@ mod tests {
 
         // Build Enhanced Mode CA / CE / CR ACKs directly
         let inbound =
-            b"MSH|^~\\&|SND|FAC|EPIC|FAC|20260101||ADT^A01|SENT_ID_100|P|2.5.1\rPID|1||P1\r";
+            b"MSH|^~\\&|SND|FAC|RCV|FAC|20260101||ADT^A01|SENT_ID_100|P|2.5.1\rPID|1||P1\r";
         let built_ca = build_hl7_ack(inbound, AckCode::CA, Some("ACK_CA_1"));
         assert!(String::from_utf8_lossy(&built_ca).ends_with("MSA|CA|SENT_ID_100"));
         assert_eq!(

@@ -169,7 +169,7 @@ fn gui_directory_scan_window_sorting_and_open_selected_handoff() {
 // - Multi-record clipboard copy
 // - Non-destructive Record List Filter (plain text & field path)
 // - Jump-to-Next Search (F3 / Shift+F3) with wrap & segment accordion expansion
-// - VS Code Dark+ dynamic delimiter syntax highlighting spans
+// - Dark editor dynamic delimiter syntax highlighting spans
 // - In-place raw editor commit onto UndoStack
 // - Docked TCP/IP panel toggling
 #[test]
@@ -233,7 +233,7 @@ fn post_phase10_ui_refinements_filter_search_copy_syntax_and_dock() {
     assert_eq!(hit_wrap, hit1);
     assert!(state.search_status.contains("wrapped"));
 
-    // 5. VS Code Dark+ syntax highlighting spans for segment tags and all 5 active delimiters
+    // 5. Dark editor syntax highlighting spans for segment tags and all 5 active delimiters
     let sample_text = "MSH|^~\\&|A^B~C\\E\\D&E\nPID|1";
     let spans = tokenize_hl7_syntax(sample_text, hl7_core::Delimiters::STANDARD, Some(0));
     assert!(spans
@@ -256,7 +256,7 @@ fn post_phase10_ui_refinements_filter_search_copy_syntax_and_dock() {
         .any(|s| s.kind == SyntaxSpanKind::SubcomponentDelimiter));
     assert!(spans.iter().any(|s| s.on_active_line));
 
-    // 6. In-place VS Code Dark+ raw editor commits via EditRecordCmd onto UndoStack
+    // 6. In-place raw editor commits via EditRecordCmd onto UndoStack
     state.select_record(0, false, &settings);
     state.inline_raw_text.push_str("\nNTE|1||Inline raw note");
     state.commit_inline_raw_edit(&settings).unwrap();
@@ -286,7 +286,7 @@ fn dual_dark_light_theme_record_navigation_jump_and_upgraded_search() {
         EditorPalette, ThemePalette,
     };
 
-    // 1. Dual Dark & Light theme palettes and EditorPalette (VS Code Dark+ vs Light+)
+    // 1. Dual Dark & Light theme palettes and EditorPalette (Dark vs Light)
     let dark_vis = build_visuals(true);
     let light_vis = build_visuals(false);
     let dark_theme = ThemePalette::for_visuals(&dark_vis);

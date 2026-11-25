@@ -398,16 +398,16 @@ impl ScrubPhiDialog {
 /// Layout mode for the Unified Record Detail Area (`§5.1`, `D-26`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DetailViewMode {
-    /// Split view showing both the VS Code Dark+ Raw Editor and the Expandable Segment Accordion.
+    /// Split view showing both the Raw Message Editor and the Expandable Segment Accordion.
     #[default]
     Split,
-    /// Show only the In-Place VS Code Dark+ Raw Message Editor.
+    /// Show only the In-Place Raw Message Editor.
     RawOnly,
     /// Show only the Expandable Segment Accordion & Aligned Field Breakdown.
     AccordionOnly,
 }
 
-/// Active tab in the Notepad++-style Find & Replace panel (`Ctrl+F` / `Ctrl+H`, `D-27`).
+/// Active tab in the Find & Replace panel (`Ctrl+F` / `Ctrl+H`, `D-27`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FindReplaceTab {
     /// Find tab (`Ctrl+F`).
@@ -605,7 +605,7 @@ pub struct SessionState {
     pub filter_error: Option<String>,
     /// Non-destructively filtered 0-based document record indices (`None` when no filter is active) (`D-26`).
     pub filtered_record_indices: Option<Vec<usize>>,
-    /// Whether the Notepad++-style Find & Replace panel (`Ctrl+F` / `Ctrl+H`) is visible (`D-26`, `D-27`).
+    /// Whether the Find & Replace panel (`Ctrl+F` / `Ctrl+H`) is visible (`D-26`, `D-27`).
     pub search_bar_open: bool,
     /// Active tab (`Find` or `Replace`) in the Find & Replace panel (`D-27`).
     pub find_replace_tab: FindReplaceTab,
@@ -625,7 +625,7 @@ pub struct SessionState {
     pub search_use_regex: bool,
     /// Match whole value (when field path is set) or whole word (unrestricted) toggle (`D-27`).
     pub search_match_whole: bool,
-    /// Wrap around toggle (default `true`, Notepad++ style) (`D-27`).
+    /// Wrap around toggle (default `true`) (`D-27`).
     pub search_wrap_around: bool,
     /// Recent `Find what` history (most recent first, max 15) (`D-27`).
     pub find_history: Vec<String>,
@@ -4367,21 +4367,21 @@ impl SessionState {
         self.scroll_to_record = true;
     }
 
-    /// Open and focus the Notepad++-style Find & Replace panel on the `Find` tab (`Ctrl+F`, `D-27`).
+    /// Open and focus the Find & Replace panel on the `Find` tab (`Ctrl+F`, `D-27`).
     pub fn open_find_panel(&mut self) {
         self.search_bar_open = true;
         self.find_replace_tab = FindReplaceTab::Find;
         self.focus_search_input = true;
     }
 
-    /// Open and focus the Notepad++-style Find & Replace panel on the `Replace` tab (`Ctrl+H`, `D-27`).
+    /// Open and focus the Find & Replace panel on the `Replace` tab (`Ctrl+H`, `D-27`).
     pub fn open_replace_panel(&mut self) {
         self.search_bar_open = true;
         self.find_replace_tab = FindReplaceTab::Replace;
         self.focus_search_input = true;
     }
 
-    /// Close the Notepad++-style Find & Replace panel (`Escape`, `D-27`).
+    /// Close the Find & Replace panel (`Escape`, `D-27`).
     pub fn close_find_replace_panel(&mut self) {
         self.search_bar_open = false;
     }

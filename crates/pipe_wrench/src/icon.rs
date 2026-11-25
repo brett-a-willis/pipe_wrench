@@ -1,4 +1,4 @@
-//! Procedural `|` (HL7 pipe) + RIDGID-style plumbing pipe wrench application icon (`Phase 18`).
+//! Procedural `|` (HL7 pipe) + pipe-wrench-style application icon (`Phase 18`).
 
 include!("icon_render.rs");
 

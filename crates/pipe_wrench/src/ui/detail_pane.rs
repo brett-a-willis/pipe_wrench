@@ -1,7 +1,7 @@
 //! Unified Record Detail Area (`§5.1`, `§5.2`, `EDIT-2`, `EDIT-3`, `D-26`).
 //!
 //! Replaces separate `Segments`, `Fields`, and bottom `Raw Record` panes with:
-//! 1. **In-Place Dual Dark/Light (`VS Code Dark+` / `VS Code Light+`) Raw Message Editor:**
+//! 1. **In-Place Dual Dark/Light Raw Message Editor:**
 //!    Directly editable multiline editor driven by [`EditorPalette::for_visuals`] (`#1E1E1E` in Dark
 //!    mode, `#FFFFFF` in Light mode) with active-line highlight and dynamic syntax colors for
 //!    segment tags (`MSH`, `PID`, `OBX`, ...) and each active delimiter (`field`, `component`,
@@ -292,7 +292,7 @@ pub enum SyntaxSpanKind {
 }
 
 impl SyntaxSpanKind {
-    /// Resolve foreground color from the active [`EditorPalette`] (`VS Code Dark+` or `VS Code Light+`).
+    /// Resolve foreground color from the active [`EditorPalette`] (dark or light theme).
     pub fn color_in(self, palette: &EditorPalette) -> Color32 {
         match self {
             Self::SegmentTag => palette.segment_tag,
@@ -471,7 +471,7 @@ fn push_or_merge_span(
     });
 }
 
-/// Build an `egui::text::LayoutJob` using the provided [`EditorPalette`] (`VS Code Dark+` or `VS Code Light+`)
+/// Build an `egui::text::LayoutJob` using the provided [`EditorPalette`] (dark or light theme)
 /// and dynamic delimiter + HL7 escape sequence syntax highlighting (`D-26`, `D-28`).
 pub fn build_editor_layout_job(
     text: &str,
@@ -490,7 +490,7 @@ pub fn build_editor_layout_job(
     )
 }
 
-/// Return the Notepad++-style end-of-line badge label for a record's [`SourceTerminator`] (`D-28`).
+/// Return the editor end-of-line badge label for a record's [`SourceTerminator`] (`D-28`).
 pub fn eol_badge_for_terminator(term: SourceTerminator) -> &'static str {
     match term {
         SourceTerminator::Cr | SourceTerminator::Unknown => "[CR]",
@@ -996,12 +996,12 @@ fn show_raw_editor(ui: &mut Ui, state: &mut SessionState, settings: &mut AppSett
             };
 
             ScrollArea::vertical()
-                .id_salt("vscode_inline_raw_scroll")
+                .id_salt("inline_raw_scroll")
                 .max_height(height.saturating_sub_f32(34.0))
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
                     let output = TextEdit::multiline(&mut state.inline_raw_text)
-                        .id_salt("vscode_inline_raw_textedit")
+                        .id_salt("inline_raw_textedit")
                         .font(egui::TextStyle::Monospace)
                         .desired_width(f32::INFINITY)
                         .desired_rows(6)

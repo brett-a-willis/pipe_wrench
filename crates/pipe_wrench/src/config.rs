@@ -72,7 +72,7 @@ pub struct AppSettings {
     pub max_records_per_page: usize,
     /// Global UI zoom factor (`0.75..=2.0`, default `1.0`, `D-28`).
     pub ui_zoom: f32,
-    /// Show Notepad++-style inline control-character markers (`[CR]`, `[LF]`, `[VT]`, `[FS]`, `·`, `→`)
+    /// Show inline editor control-character markers (`[CR]`, `[LF]`, `[VT]`, `[FS]`, `·`, `→`)
     /// in the Raw Message Editor (`¶` toggle, default `false`, `D-28`).
     pub show_control_chars: bool,
     /// User-configured additional custom HL7 PHI field paths persisted across sessions.

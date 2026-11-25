@@ -1,5 +1,5 @@
 // Pure-Rust deterministic RGBA pixel generator and multi-resolution `.ico` encoder
-// for the `pipe_wrench` application icon: HL7 pipe (`|`) + RIDGID-style plumbing pipe wrench.
+// for the `pipe_wrench` application icon: HL7 pipe (`|`) + pipe-wrench-style glyph.
 //
 // Shared between runtime (`src/icon.rs`) and Windows resource embedding (`build.rs`).
 
@@ -187,7 +187,7 @@ fn sample_icon(u: f32, v: f32) -> [f32; 4] {
         return color;
     }
 
-    // 3. Right Element: Classic RIDGID-Style Plumbing Pipe Wrench (facing left toward `|`)
+    // 3. Right Element: Classic Pipe-Wrench-Style Glyph (facing left toward `|`)
     let steel_bright = hex(0xF1, 0xF5, 0xF9);
     let steel_mid = hex(0xCB, 0xD5, 0xE1);
     let steel_dark = hex(0x94, 0xA3, 0xB8);
