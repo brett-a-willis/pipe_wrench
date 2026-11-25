@@ -1,0 +1,31 @@
+[package]
+name = "hl7-net"
+description = "Async Tokio MLLP client sender, multi-connection listener, and TLS 1.2/1.3 & mTLS transport for HL7 v2"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+bytes.workspace = true
+futures-util.workspace = true
+hl7-core.workspace = true
+memchr.workspace = true
+rustls.workspace = true
+rustls-pemfile.workspace = true
+rustls-pki-types.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+time.workspace = true
+tokio.workspace = true
+tokio-rustls.workspace = true
+tokio-util.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+rcgen = "0.13"
+tempfile.workspace = true

@@ -1,0 +1,3 @@
+# Preserve exact wire bytes (CR, LF, CRLF, LFLF, CR+NUL, binary) in HL7 fixtures across OSes
+tests/fixtures/** -text
+*.hl7 -text

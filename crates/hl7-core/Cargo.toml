@@ -1,0 +1,32 @@
+[package]
+name = "hl7-core"
+description = "Pure synchronous HL7 v2 parsing, framing, addressing, editing, reporting, and streaming scanner library"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+csv.workspace = true
+encoding_rs.workspace = true
+flate2.workspace = true
+globset.workspace = true
+memchr.workspace = true
+rayon.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sysinfo.workspace = true
+tempfile.workspace = true
+thiserror.workspace = true
+time.workspace = true
+toml.workspace = true
+uuid.workspace = true
+walkdir.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true

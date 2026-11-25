@@ -1,0 +1,35 @@
+[package]
+name = "pipe_wrench"
+description = "Cross-platform native desktop HL7 v2 troubleshooter, editor, report builder, and MLLP/TLS client & listener"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+readme.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+arboard.workspace = true
+directories.workspace = true
+eframe.workspace = true
+egui.workspace = true
+egui_extras.workspace = true
+hl7-core.workspace = true
+hl7-net.workspace = true
+png.workspace = true
+rfd.workspace = true
+serde.workspace = true
+tokio.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+bytes.workspace = true
+tempfile.workspace = true
+tokio-util.workspace = true
+
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1"

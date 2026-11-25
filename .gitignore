@@ -1,0 +1,8 @@
+/target
+*.exe
+*.pdb
+# local/editor
+.vscode/
+.idea/
+# never commit real data
+*.local.*

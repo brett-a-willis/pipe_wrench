@@ -1,0 +1,2 @@
+Plain notes file without any HL7 messages.
+Second line.
