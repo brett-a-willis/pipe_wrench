@@ -14,12 +14,25 @@
 
 ## What It Does
 
-- **Split-Pane Raw & Structural Inspection:** View syntax-highlighted wire bytes (delimiters, escape sequences, `[CR]`/`[LF]` line endings) side-by-side with an interactive **Segment Accordion** resolving HL7 v2.5.1 / v2.8 field, component, and subcomponent names (`ROL`, `GT1-1..57`, composite types, and Z-segments) with bidirectional cursor sync.
-- **Safe Two-Way Editing:** Edit fields or components inline (`F2` / double-click), toggle **`Show Empty`** to populate missing fields without counting pipes, preview decoded escapes (`\*`), insert/reorder segments, and undo/redo everything (`Ctrl+Z` / `Ctrl+Y`).
-- **Fast Multi-Message Filtering:** Filter large logs in one row using `AND`/`OR` stacked rules, wildcard repetitions (`PID-3(*).1=123`), and operators (`=`, `!=`, `~=` contains, `=~` regex, `>`, `>=`, `<`, `<=`, and `exists`), then export or keep only matching messages.
-- **Conversion, Batch & Report Tools:** Path-targeted Find & Replace (`$1` regex capture groups), delimiter/terminator conversion, multi-select CSV/JSON report building, deterministic PHI de-identification (`File -> Export Synthetic (Scrub PHI)...` / `Edit -> Scrub PHI in Loaded Messages...`), one-click Base64/`ED` attachment extraction (`OBX-5` PDF/RTF/PNG/JPEG), and lossless raw-byte preservation on unmodified messages.
-- **Built-In MLLP & TLS Testing:** Send and receive HL7 messages over MLLP (with Original/Enhanced ACKs, `MSH-10` control-ID rewrite, `MSH-7` timestamp refresh, and optional TLS/mTLS) directly from the UI or CLI.
-- **Single-Binary Portability:** Self-contained native executables (`pipe_wrench` GUI + `pipe_wrench_cli` CLI) with a responsive layout that scales cleanly from wide monitors down to narrow windows.
+- **Split-Pane Raw & Structural Inspection**
+  - Syntax-highlighted wire view showing active delimiters, escape sequences, and `[CR]`/`[LF]` line endings.
+  - Interactive **Segment Accordion** resolving HL7 v2.5.1 / v2.8 field, component, and subcomponent names (`ROL`, `GT1-1..57`, composite types, and Z-segments) with bidirectional cursor sync.
+- **Safe Two-Way Editing**
+  - Edit fields or components inline (`F2` / double-click) and toggle **`Show Empty`** to populate missing fields without counting pipes.
+  - Preview decoded escapes (`\*`), insert or reorder segments, and undo/redo every change (`Ctrl+Z` / `Ctrl+Y`).
+  - Lossless raw-byte preservation on all unmodified messages.
+- **Fast Multi-Message Filtering**
+  - Filter large logs in one row with stacked `AND`/`OR` rules and wildcard repetitions (`PID-3(*).1=123`).
+  - Full operator set (`=`, `!=`, `~=` contains, `=~` regex, `>`, `>=`, `<`, `<=`, and `exists`), with non-destructive export or keep-only pruning.
+- **Conversion, Batch & Report Tools**
+  - Path-targeted Find & Replace with `$1` regex capture groups, plus delimiter and line-terminator conversion.
+  - Multi-select CSV/JSON report builder and one-click Base64/`ED` attachment extraction (`OBX-5` PDF, RTF, PNG, JPEG).
+  - Deterministic PHI de-identification (`File -> Export Synthetic (Scrub PHI)...` / `Edit -> Scrub PHI in Loaded Messages...`).
+- **Built-In MLLP & TLS Testing**
+  - Send and receive HL7 messages over MLLP directly from the GUI or CLI, with Original/Enhanced ACKs and optional TLS 1.2/1.3 & mTLS.
+  - Automatic outgoing `MSH-10` control-ID rewrite and `MSH-7` timestamp refresh.
+- **Single-Binary Portability**
+  - Self-contained native executables (`pipe_wrench` GUI + `pipe_wrench_cli` CLI) with a responsive layout that scales from wide monitors down to narrow windows.
 
 ---
 
