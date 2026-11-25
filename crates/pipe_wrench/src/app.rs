@@ -13,12 +13,16 @@ use crate::state::{
 use crate::strings;
 use crate::ui::detail_pane::DetailPaneAction;
 use crate::ui::icons::{
-    icon_labeled_button, icon_menu_button, icon_menu_button_tinted, icon_submenu_button,
-    icon_toggle_labeled_button, paint_icon, IconKind, ICON_SIZE_INLINE,
+    icon_button, icon_labeled_button, icon_menu_button, icon_menu_button_tinted,
+    icon_submenu_button, icon_toggle_button, icon_toggle_labeled_button, paint_icon, IconKind,
+    ICON_SIZE_INLINE,
 };
 use crate::ui::net_panels::TcpIpDockTab;
 use crate::ui::record_list::RecordListAction;
-use crate::ui::theme::{add_action_button_job, ThemePalette};
+use crate::ui::theme::{
+    add_action_button_job, apply_unified_control_metrics, styled_singleline_text_edit,
+    toggle_pill_button, ThemePalette, CONTROL_CORNER_RADIUS, CONTROL_HEIGHT,
+};
 use crate::ui::{
     compare_modal, detail_pane, dialogs, net_panels, record_list, reports, scan_window, theme,
 };
@@ -2129,260 +2133,310 @@ impl PipeWrenchApp {
         let mut remove_rule_idx: Option<usize> = None;
         let mut new_combine_mode: Option<FilterCombineMode> = None;
 
-        ui.horizontal_wrapped(|ui| {
-            ui.strong("Filter:");
-            let hint_color = ui.visuals().weak_text_color();
-            let is_wildcard_target = self.state.filter_query.trim() == crate::state::DEFAULT_FILTER_PATH;
+        ui.scope(|ui| {
+            apply_unified_control_metrics(ui);
 
-            // Quick path selector dropdown (`* (Entire Message)` + common HL7 paths)
-            let target_badge = if is_wildcard_target {
-                "* (Entire Message)".to_string()
-            } else if self.state.filter_query.trim().is_empty() {
-                "Target...".to_string()
-            } else {
-                self.state.filter_query.trim().to_string()
-            };
-            egui::ComboBox::from_id_salt("filter_target_preset_combo")
-                .selected_text(egui::RichText::new(target_badge).monospace())
-                .width(152.0)
-                .show_ui(ui, |ui| {
-                    for (val, label) in [
-                        (crate::state::DEFAULT_FILTER_PATH, "* (Entire Message)"),
-                        ("MSH-9", "MSH-9 (Message Type)"),
-                        ("PID-3.1", "PID-3.1 (Patient MRN)"),
-                        ("PID-5.1", "PID-5.1 (Family Name)"),
-                        ("PV1-2", "PV1-2 (Patient Class)"),
-                        ("OBX-5", "OBX-5 (Observation Value)"),
-                    ] {
-                        if ui
-                            .selectable_label(self.state.filter_query.trim() == val, label)
-                            .clicked()
-                        {
-                            self.state.filter_query = val.to_string();
-                        }
-                    }
-                });
+            ui.horizontal_wrapped(|ui| {
+                ui.strong("Filter:");
+                let is_wildcard_target =
+                    self.state.filter_query.trim() == crate::state::DEFAULT_FILTER_PATH;
 
-            let resp = ui
-                .add(
-                    egui::TextEdit::singleline(&mut self.state.filter_query)
-                        .id_salt("filter_bar_query_input")
-                        .hint_text(
-                            egui::RichText::new("* (Entire Message) or HL7 path...")
-                                .color(hint_color),
+                let resp = ui
+                    .add(
+                        styled_singleline_text_edit(
+                            &mut self.state.filter_query,
+                            190.0,
+                            Some("* or HL7 path (e.g. PID-3(*).1, MSH-9.1)"),
                         )
-                        .desired_width(175.0),
-                )
-                .on_hover_text(
-                    "Use * to search the entire message content, or type any HL7 path (e.g. PID-3.1, PV1-2, MSH-9.2)",
-                );
-            if self.state.focus_filter_input {
-                resp.request_focus();
-                if let Some(mut text_state) = egui::TextEdit::load_state(ui.ctx(), resp.id) {
-                    let end = egui::text::CCursor::new(self.state.filter_query.chars().count());
-                    text_state
-                        .cursor
-                        .set_char_range(Some(egui::text::CCursorRange::one(end)));
-                    text_state.store(ui.ctx(), resp.id);
-                }
-                self.state.focus_filter_input = false;
-            }
-            if !self.state.filter_query.is_empty()
-                && !is_wildcard_target
-                && ui
-                    .small_button("×")
-                    .on_hover_text("Reset target path to * (Entire Message)")
-                    .clicked()
-            {
-                self.state.filter_query = crate::state::DEFAULT_FILTER_PATH.to_string();
-                self.state.filter_builder_value.clear();
-                if self.state.active_filters.is_empty() {
-                    self.state.clear_filter(&self.settings);
-                } else {
-                    self.state.apply_filter(&self.settings);
-                }
-            }
-
-            egui::ComboBox::from_id_salt("filter_builder_op_combo")
-                .selected_text(self.state.filter_builder_op.label())
-                .width(146.0)
-                .show_ui(ui, |ui| {
-                    for op in FilterBuilderOp::ALL {
-                        ui.selectable_value(&mut self.state.filter_builder_op, op, op.label());
+                        .id_salt("filter_bar_query_input"),
+                    )
+                    .on_hover_text(
+                        "Target HL7 path: use * to search the entire message, or type a path such as PID-3(*).1, MSH-9.1, PV1-2, or OBX-5",
+                    );
+                if self.state.focus_filter_input {
+                    resp.request_focus();
+                    if let Some(mut text_state) = egui::TextEdit::load_state(ui.ctx(), resp.id) {
+                        let end =
+                            egui::text::CCursor::new(self.state.filter_query.chars().count());
+                        text_state
+                            .cursor
+                            .set_char_range(Some(egui::text::CCursorRange::one(end)));
+                        text_state.store(ui.ctx(), resp.id);
                     }
-                });
+                    self.state.focus_filter_input = false;
+                }
+                if !self.state.filter_query.is_empty()
+                    && !is_wildcard_target
+                    && icon_button(
+                        ui,
+                        IconKind::Close,
+                        true,
+                        None,
+                        egui::vec2(CONTROL_HEIGHT, CONTROL_HEIGHT),
+                        "Reset target path to * (Entire Message)",
+                    )
+                    .clicked()
+                {
+                    self.state.filter_query = crate::state::DEFAULT_FILTER_PATH.to_string();
+                    self.state.filter_builder_value.clear();
+                    if self.state.active_filters.is_empty() {
+                        self.state.clear_filter(&self.settings);
+                    } else {
+                        self.state.apply_filter(&self.settings);
+                    }
+                }
 
-            let mut value_enter = false;
-            if self.state.filter_builder_op.requires_value() {
-                let value_hint = if is_wildcard_target {
-                    "Search entire message..."
-                } else {
-                    "Value"
-                };
-                let val_resp = ui.add(
-                    egui::TextEdit::singleline(&mut self.state.filter_builder_value)
-                        .id_salt("filter_builder_value_input")
-                        .hint_text(egui::RichText::new(value_hint).color(hint_color))
-                        .desired_width(145.0),
-                );
-                value_enter =
-                    val_resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-            }
+                egui::ComboBox::from_id_salt("filter_builder_op_combo")
+                    .selected_text(self.state.filter_builder_op.label())
+                    .width(150.0)
+                    .height(260.0)
+                    .show_ui(ui, |ui| {
+                        for op in FilterBuilderOp::ALL {
+                            ui.selectable_value(&mut self.state.filter_builder_op, op, op.label());
+                        }
+                    })
+                    .response
+                    .on_hover_text(
+                        "Comparison operator for matching the target HL7 path or entire message",
+                    );
 
-            if ui
-                .selectable_label(self.state.filter_help_open, egui::RichText::new("?").strong())
-                .on_hover_text(
+                let mut value_enter = false;
+                if self.state.filter_builder_op.requires_value() {
+                    let value_hint = if is_wildcard_target {
+                        "Search entire message..."
+                    } else {
+                        "Value"
+                    };
+                    let val_resp = ui
+                        .add(
+                            styled_singleline_text_edit(
+                                &mut self.state.filter_builder_value,
+                                160.0,
+                                Some(value_hint),
+                            )
+                            .id_salt("filter_builder_value_input"),
+                        )
+                        .on_hover_text(
+                            "Text, numeric value, or regex pattern to match against the target path",
+                        );
+                    value_enter =
+                        val_resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                }
+
+                if icon_toggle_button(
+                    ui,
+                    IconKind::Help,
+                    self.state.filter_help_open,
+                    true,
+                    palette.accent,
+                    egui::vec2(CONTROL_HEIGHT, CONTROL_HEIGHT),
                     "Filter syntax: Path + Operator + Value, or inline SEG-F[(R|*)][.C[.S]] with =, !=, ~=, =~, contains, exists, >, >=, <, <=, && / ||. Click for examples.",
                 )
                 .clicked()
-            {
-                self.state.filter_help_open = !self.state.filter_help_open;
-            }
-            if ui
-                .selectable_label(self.state.filter_case_sensitive, "Aa")
-                .on_hover_text("Case-Sensitive Filter")
-                .clicked()
-            {
-                self.state.filter_case_sensitive = !self.state.filter_case_sensitive;
-                if self.state.filtered_record_indices.is_some() {
+                {
+                    self.state.filter_help_open = !self.state.filter_help_open;
+                }
+                if toggle_pill_button(ui, "Aa", self.state.filter_case_sensitive, palette.accent)
+                    .on_hover_text("Case-Sensitive Filter")
+                    .clicked()
+                {
+                    self.state.filter_case_sensitive = !self.state.filter_case_sensitive;
+                    if self.state.filtered_record_indices.is_some() {
+                        self.state.apply_filter(&self.settings);
+                    }
+                }
+                if toggle_pill_button(ui, "!v", self.state.filter_invert_match, palette.accent)
+                    .on_hover_text("Invert Match (-v): keep messages that do NOT match")
+                    .clicked()
+                {
+                    self.state.filter_invert_match = !self.state.filter_invert_match;
+                    if self.state.filtered_record_indices.is_some() {
+                        self.state.apply_filter(&self.settings);
+                    }
+                }
+
+                let (enter_key, shift_held) =
+                    ui.input(|i| (i.key_pressed(egui::Key::Enter), i.modifiers.shift));
+                let enter_pressed = (resp.lost_focus() && enter_key) || value_enter;
+                let can_add = self.state.resolve_unified_filter_input().is_some();
+                if icon_labeled_button(ui, IconKind::Add, "Add", can_add, Some(palette.accent_green))
+                    .on_hover_text("Add rule to active filters (Shift+Enter)")
+                    .clicked()
+                    || (enter_pressed && shift_held)
+                {
+                    self.state.add_filter_from_input(&self.settings);
+                }
+                if icon_labeled_button(ui, IconKind::Check, "Apply", true, Some(palette.accent))
+                    .on_hover_text("Apply filter (Enter)")
+                    .clicked()
+                    || (enter_pressed && !shift_held)
+                {
                     self.state.apply_filter(&self.settings);
                 }
-            }
-            if ui
-                .selectable_label(self.state.filter_invert_match, "!v")
-                .on_hover_text("Invert Match (-v)")
-                .clicked()
-            {
-                self.state.filter_invert_match = !self.state.filter_invert_match;
-                if self.state.filtered_record_indices.is_some() {
-                    self.state.apply_filter(&self.settings);
+                if icon_labeled_button(ui, IconKind::Close, "Clear", true, None)
+                    .on_hover_text("Clear all active filters")
+                    .clicked()
+                {
+                    self.state.clear_filter(&self.settings);
                 }
-            }
-            let (enter_key, shift_held) =
-                ui.input(|i| (i.key_pressed(egui::Key::Enter), i.modifiers.shift));
-            let enter_pressed = (resp.lost_focus() && enter_key) || value_enter;
-            let can_add = self.state.resolve_unified_filter_input().is_some();
-            if icon_labeled_button(ui, IconKind::Add, "Add", can_add, Some(palette.accent_green))
-                .on_hover_text("Add rule to active filters (Shift+Enter)")
-                .clicked()
-                || (enter_pressed && shift_held)
-            {
-                self.state.add_filter_from_input(&self.settings);
-            }
-            if icon_labeled_button(ui, IconKind::Check, "Apply", true, Some(palette.accent))
-                .on_hover_text("Apply filter (Enter)")
-                .clicked()
-                || (enter_pressed && !shift_held)
-            {
-                self.state.apply_filter(&self.settings);
-            }
-            if icon_labeled_button(ui, IconKind::Close, "Clear", true, None)
-                .on_hover_text("Clear all active filters")
-                .clicked()
-            {
-                self.state.clear_filter(&self.settings);
-            }
-            if let Some(ref visible) = self.state.filtered_record_indices {
-                let match_count = visible.len();
-                let total_count = self.state.doc.len();
-                ui.colored_label(
-                    palette.accent,
-                    format!("Showing {match_count} of {total_count} messages"),
-                )
-                .on_hover_text(
-                    "Filtering is non-destructive; all messages remain loaded in memory until pruned.",
-                );
-                if ui
-                    .add_enabled(match_count > 0, egui::Button::new("Export Filtered..."))
+                if let Some(ref visible) = self.state.filtered_record_indices {
+                    let match_count = visible.len();
+                    let total_count = self.state.doc.len();
+                    ui.colored_label(
+                        palette.accent,
+                        format!("Showing {match_count} of {total_count} messages"),
+                    )
+                    .on_hover_text(
+                        "Filtering is non-destructive; all messages remain loaded in memory until pruned.",
+                    );
+                    if icon_labeled_button(
+                        ui,
+                        IconKind::Save,
+                        "Export Filtered...",
+                        match_count > 0,
+                        None,
+                    )
                     .on_hover_text(
                         "Save only the matching filtered messages to a new file without modifying this session",
                     )
                     .clicked()
-                {
-                    export_filtered_clicked = true;
+                    {
+                        export_filtered_clicked = true;
+                    }
+                    let can_prune = match_count < total_count;
+                    if icon_labeled_button(
+                        ui,
+                        IconKind::Delete,
+                        "Keep Only Filtered",
+                        can_prune,
+                        Some(palette.accent_red),
+                    )
+                    .on_hover_text(
+                        "Remove unmatched messages from memory to keep only the filtered subset",
+                    )
+                    .clicked()
+                    {
+                        keep_only_clicked = true;
+                    }
                 }
-                let can_prune = match_count < total_count;
-                if icon_labeled_button(
-                    ui,
-                    IconKind::Delete,
-                    "Keep Only Filtered",
-                    can_prune,
-                    Some(palette.accent_red),
-                )
-                .on_hover_text(
-                    "Remove unmatched messages from memory to keep only the filtered subset",
-                )
-                .clicked()
-                {
-                    keep_only_clicked = true;
+                if let Some(ref err) = self.state.filter_error {
+                    ui.colored_label(egui::Color32::LIGHT_RED, err);
                 }
-            }
-            if let Some(ref err) = self.state.filter_error {
-                ui.colored_label(egui::Color32::LIGHT_RED, err);
-            }
-        });
+            });
 
-        if !self.state.active_filters.is_empty() {
-            ui.add_space(2.0);
-            ui.horizontal_wrapped(|ui| {
-                ui.weak("Match:");
-                if ui
-                    .selectable_label(
-                        self.state.filter_combine_mode == FilterCombineMode::And,
+            if !self.state.active_filters.is_empty() {
+                ui.add_space(2.0);
+                ui.horizontal_wrapped(|ui| {
+                    ui.weak("Match:");
+                    if toggle_pill_button(
+                        ui,
                         "AND",
+                        self.state.filter_combine_mode == FilterCombineMode::And,
+                        palette.accent,
                     )
                     .on_hover_text("Match messages satisfying ALL active filters")
                     .clicked()
-                {
-                    new_combine_mode = Some(FilterCombineMode::And);
-                }
-                if ui
-                    .selectable_label(
-                        self.state.filter_combine_mode == FilterCombineMode::Or,
+                    {
+                        new_combine_mode = Some(FilterCombineMode::And);
+                    }
+                    if toggle_pill_button(
+                        ui,
                         "OR",
+                        self.state.filter_combine_mode == FilterCombineMode::Or,
+                        palette.accent,
                     )
                     .on_hover_text("Match messages satisfying ANY active filter")
                     .clicked()
-                {
-                    new_combine_mode = Some(FilterCombineMode::Or);
-                }
-                ui.separator();
-                for (idx, rule) in self.state.active_filters.iter().enumerate() {
-                    let mut flags = String::new();
-                    if rule.case_sensitive {
-                        flags.push_str(" Aa");
+                    {
+                        new_combine_mode = Some(FilterCombineMode::Or);
                     }
-                    if rule.use_regex {
-                        flags.push_str(" .*");
+                    ui.separator();
+                    for (idx, rule) in self.state.active_filters.iter().enumerate() {
+                        let mut flags = String::new();
+                        if rule.case_sensitive {
+                            flags.push_str(" Aa");
+                        }
+                        if rule.use_regex {
+                            flags.push_str(" .*");
+                        }
+                        if rule.invert_match {
+                            flags.push_str(" !v");
+                        }
+                        egui::Frame::NONE
+                            .fill(palette.elevated_bg)
+                            .stroke(egui::Stroke::new(1.0_f32, palette.accent))
+                            .corner_radius(egui::CornerRadius::same(CONTROL_CORNER_RADIUS))
+                            .inner_margin(egui::Margin::symmetric(8, 3))
+                            .show(ui, |ui| {
+                                ui.set_min_height(CONTROL_HEIGHT - 8.0);
+                                ui.horizontal(|ui| {
+                                    ui.spacing_mut().item_spacing.x = 6.0;
+                                    ui.label(
+                                        egui::RichText::new(format!("{}{}", rule.query, flags))
+                                            .monospace()
+                                            .small(),
+                                    );
+                                    if icon_button(
+                                        ui,
+                                        IconKind::Close,
+                                        true,
+                                        None,
+                                        egui::vec2(20.0, 20.0),
+                                        "Remove this filter rule",
+                                    )
+                                    .clicked()
+                                    {
+                                        remove_rule_idx = Some(idx);
+                                    }
+                                });
+                            });
                     }
-                    if rule.invert_match {
-                        flags.push_str(" !v");
-                    }
-                    egui::Frame::NONE
-                        .fill(palette.elevated_bg)
-                        .stroke(egui::Stroke::new(1.0_f32, palette.accent))
-                        .corner_radius(egui::CornerRadius::same(10))
-                        .inner_margin(egui::Margin::symmetric(6, 2))
-                        .show(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                ui.spacing_mut().item_spacing.x = 4.0;
-                                ui.label(
-                                    egui::RichText::new(format!("{}{}", rule.query, flags))
-                                        .monospace()
-                                        .small(),
-                                );
+                });
+            }
+
+            if self.state.filter_help_open {
+                ui.add_space(2.0);
+                egui::Frame::NONE
+                    .fill(palette.elevated_bg)
+                    .stroke(egui::Stroke::new(1.0_f32, palette.divider))
+                    .corner_radius(egui::CornerRadius::same(CONTROL_CORNER_RADIUS))
+                    .inner_margin(egui::Margin::symmetric(8, 6))
+                    .show(ui, |ui| {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.strong("Filter Syntax:");
+                            ui.weak(
+                                "SEG-F[(R|*)][.C[.S]]  |  Wildcard repetitions: PID-3(*).1  |  Operators: =  !=  ~=  =~  contains  exists  >  >=  <  <=",
+                            );
+                        });
+                        ui.horizontal_wrapped(|ui| {
+                            ui.weak("Examples (click to insert):");
+                            for ex in [
+                                "MSH-9.1=ADT",
+                                "PID-3(*).1=123",
+                                "PID-3(*).1 ~= 23",
+                                "PID-5.1 =~ ^SM.*",
+                                "MSH-7 >= 20260101",
+                                "OBX-5 > 200",
+                                "PID-3(*).1 exists",
+                                "ROL-4 exists",
+                            ] {
                                 if ui
-                                    .small_button("×")
-                                    .on_hover_text("Remove this filter rule")
+                                    .add(
+                                        egui::Button::new(egui::RichText::new(ex).monospace())
+                                            .min_size(egui::vec2(0.0, CONTROL_HEIGHT)),
+                                    )
+                                    .on_hover_text(format!("Apply example filter: {ex}"))
                                     .clicked()
                                 {
-                                    remove_rule_idx = Some(idx);
+                                    self.state.filter_query = ex.to_string();
+                                    self.state.filter_builder_value.clear();
+                                    self.state.apply_filter(&self.settings);
                                 }
-                            });
+                            }
                         });
-                }
-            });
-        }
+                    });
+            }
+        });
 
         if let Some(mode) = new_combine_mode {
             self.state.set_filter_combine_mode(mode, &self.settings);
@@ -2397,44 +2451,6 @@ impl PipeWrenchApp {
             if let Err(e) = self.state.request_keep_only_filtered(&self.settings) {
                 self.state.modal_alert = Some(e.to_string());
             }
-        }
-
-        if self.state.filter_help_open {
-            egui::Frame::NONE
-                .fill(palette.elevated_bg)
-                .stroke(egui::Stroke::new(1.0_f32, palette.divider))
-                .corner_radius(egui::CornerRadius::same(6))
-                .inner_margin(egui::Margin::symmetric(8, 6))
-                .show(ui, |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        ui.strong("Filter Syntax:");
-                        ui.weak(
-                            "SEG-F[(R|*)][.C[.S]]  |  Wildcard repetitions: PID-3(*).1  |  Operators: =  !=  ~=  =~  contains  exists  >  >=  <  <=",
-                        );
-                    });
-                    ui.horizontal_wrapped(|ui| {
-                        ui.weak("Examples (click to insert):");
-                        for ex in [
-                            "MSH-9.1=ADT",
-                            "PID-3(*).1=123",
-                            "PID-3(*).1 ~= 23",
-                            "PID-5.1 =~ ^SM.*",
-                            "MSH-7 >= 20260101",
-                            "OBX-5 > 200",
-                            "PID-3(*).1 exists",
-                            "ROL-4 exists",
-                        ] {
-                            if ui
-                                .small_button(egui::RichText::new(ex).monospace())
-                                .clicked()
-                            {
-                                self.state.filter_query = ex.to_string();
-                                self.state.filter_builder_value.clear();
-                                self.state.apply_filter(&self.settings);
-                            }
-                        }
-                    });
-                });
         }
     }
 

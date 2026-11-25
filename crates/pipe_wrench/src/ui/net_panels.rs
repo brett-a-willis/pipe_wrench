@@ -26,7 +26,13 @@ use crate::config::{
     save_sender_profile_in,
 };
 use crate::strings;
-use crate::ui::theme::{ack_code_pill_colors, render_pill_badge, ThemePalette};
+use crate::ui::icons::{
+    icon_labeled_button, icon_toggle_labeled_button, paint_icon, IconKind, ICON_SIZE_INLINE,
+};
+use crate::ui::theme::{
+    ack_code_pill_colors, apply_unified_control_metrics, render_pill_badge,
+    styled_singleline_text_edit, ThemePalette, CONTROL_HEIGHT,
+};
 
 /// Editable envelope byte fields accepting Decimal (`11`), Octal (`0o13`), or Hex (`0x0B`) (`NET-1`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -979,60 +985,117 @@ pub fn show_docked_tcpip_panel(
     doc_records: &[Record],
     selected_records: &BTreeSet<usize>,
 ) {
-    ui.horizontal(|ui| {
-        ui.heading("TCP/IP (MLLP & TLS 1.2/1.3)");
-        ui.separator();
-        ui.selectable_value(
-            &mut net.active_tab,
-            TcpIpDockTab::ClientSender,
-            "Client Sender",
-        );
-        ui.selectable_value(
-            &mut net.active_tab,
-            TcpIpDockTab::ServerListener,
-            if net.listener_running {
+    let palette = ThemePalette::for_visuals(ui.visuals());
+    ui.scope(|ui| {
+        apply_unified_control_metrics(ui);
+
+        ui.horizontal_wrapped(|ui| {
+            ui.strong(RichText::new("TCP/IP (MLLP & TLS 1.2/1.3)").size(15.0));
+            ui.separator();
+
+            if icon_toggle_labeled_button(
+                ui,
+                IconKind::Send,
+                "Client Sender",
+                net.active_tab == TcpIpDockTab::ClientSender,
+                true,
+                palette.accent,
+            )
+            .on_hover_text("Configure and send HL7 messages outbound over MLLP or TLS 1.2/1.3")
+            .clicked()
+            {
+                net.active_tab = TcpIpDockTab::ClientSender;
+            }
+
+            let listener_label = if net.listener_running {
                 "Server Listener (Listening)"
             } else {
                 "Server Listener"
-            },
-        );
-        ui.selectable_value(
-            &mut net.active_tab,
-            TcpIpDockTab::Connections,
-            format!("Connections ({})", net.connections.len()),
-        );
-        ui.selectable_value(
-            &mut net.active_tab,
-            TcpIpDockTab::AckLog,
-            format!("ACK Log ({})", net.ack_log.len()),
-        );
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("Close TCP/IP Panel").clicked() {
-                net.docked_open = false;
-                net.sender_open = false;
-                net.listener_open = false;
+            };
+            let listener_accent = if net.listener_running {
+                palette.accent_green
+            } else {
+                palette.accent
+            };
+            if icon_toggle_labeled_button(
+                ui,
+                IconKind::Listen,
+                listener_label,
+                net.active_tab == TcpIpDockTab::ServerListener,
+                true,
+                listener_accent,
+            )
+            .on_hover_text(
+                "Run a multi-connection inbound MLLP / TLS server to receive HL7 messages and send ACKs",
+            )
+            .clicked()
+            {
+                net.active_tab = TcpIpDockTab::ServerListener;
             }
-        });
-    });
-    ui.separator();
 
-    ScrollArea::vertical()
-        .id_salt("docked_tcpip_body_scroll")
-        .auto_shrink([false, false])
-        .show(ui, |ui| match net.active_tab {
-            TcpIpDockTab::ClientSender => {
-                show_sender_tab_ui(ui, ctx, net, doc_records, selected_records);
+            let conn_label = format!("Connections ({})", net.connections.len());
+            if icon_toggle_labeled_button(
+                ui,
+                IconKind::Network,
+                &conn_label,
+                net.active_tab == TcpIpDockTab::Connections,
+                true,
+                palette.accent,
+            )
+            .on_hover_text("Inspect active and historical peer connections to the MLLP listener")
+            .clicked()
+            {
+                net.active_tab = TcpIpDockTab::Connections;
             }
-            TcpIpDockTab::ServerListener => {
-                show_listener_tab_ui(ui, ctx, net);
+
+            let ack_label = format!("ACK Log ({})", net.ack_log.len());
+            if icon_toggle_labeled_button(
+                ui,
+                IconKind::Log,
+                &ack_label,
+                net.active_tab == TcpIpDockTab::AckLog,
+                true,
+                palette.accent,
+            )
+            .on_hover_text(
+                "View received ACK, NAK, and malformed MLLP packets and export send history CSV",
+            )
+            .clicked()
+            {
+                net.active_tab = TcpIpDockTab::AckLog;
             }
-            TcpIpDockTab::Connections => {
-                show_connections_tab_ui(ui, net);
-            }
-            TcpIpDockTab::AckLog => {
-                show_ack_log_tab_ui(ui, net);
-            }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if icon_labeled_button(ui, IconKind::Close, "Close", true, None)
+                    .on_hover_text("Close the docked TCP/IP panel")
+                    .clicked()
+                {
+                    net.docked_open = false;
+                    net.sender_open = false;
+                    net.listener_open = false;
+                }
+            });
         });
+        ui.separator();
+
+        ScrollArea::vertical()
+            .id_salt("docked_tcpip_body_scroll")
+            .auto_shrink([false, false])
+            .show(ui, |ui| match net.active_tab {
+                TcpIpDockTab::ClientSender => {
+                    show_sender_tab_ui(ui, ctx, net, doc_records, selected_records);
+                }
+                TcpIpDockTab::ServerListener => {
+                    show_listener_tab_ui(ui, ctx, net);
+                }
+                TcpIpDockTab::Connections => {
+                    show_connections_tab_ui(ui, net);
+                }
+                TcpIpDockTab::AckLog => {
+                    show_ack_log_tab_ui(ui, net);
+                }
+            });
+    });
 }
 
 /// Render only confirmation/alert modals for the network subsystem (no floating Sender/Listener windows per `D-26`).
@@ -1041,17 +1104,67 @@ pub fn show_network_modals(ctx: &Context, net: &mut NetworkPanelState) {
     show_modal_ack_alert_window(ctx, net);
 }
 
-fn show_envelope_controls(ui: &mut Ui, id_salt: &str, env_ui: &mut EnvelopeInputState) {
+fn nak_action_label(action: NakAction) -> &'static str {
+    match action {
+        NakAction::Resend => "Resend record",
+        NakAction::ResetAndResend => "Reset connection & resend",
+        NakAction::Skip => "Skip record",
+    }
+}
+
+fn max_tries_action_label(action: MaxTriesAction) -> &'static str {
+    match action {
+        MaxTriesAction::ResetAndResend => "Reset connection & resend",
+        MaxTriesAction::Skip => "Skip record",
+        MaxTriesAction::CloseAndStop => "Close & stop",
+    }
+}
+
+fn show_tls_header_label(ui: &mut Ui, enabled: bool, palette: &ThemePalette) {
     ui.horizontal(|ui| {
-        ui.label("Envelope (Hex/Dec/Oct) — SB:");
-        ui.add(egui::TextEdit::singleline(&mut env_ui.sb_input).desired_width(48.0));
+        ui.spacing_mut().item_spacing.x = 6.0;
+        let (rect, _) = ui.allocate_exact_size(
+            egui::vec2(ICON_SIZE_INLINE, ICON_SIZE_INLINE),
+            egui::Sense::hover(),
+        );
+        let fg = if enabled {
+            palette.accent_green
+        } else {
+            ui.visuals().text_color()
+        };
+        paint_icon(
+            ui.painter(),
+            IconKind::Lock,
+            rect.center(),
+            fg,
+            ui.visuals().panel_fill,
+            ICON_SIZE_INLINE,
+        );
+        let suffix = if enabled { " (Enabled)" } else { "" };
+        ui.strong(format!("TLS 1.2 / 1.3 & Mutual TLS (mTLS){suffix}"));
+    });
+}
+
+fn show_envelope_controls(ui: &mut Ui, id_salt: &str, env_ui: &mut EnvelopeInputState) {
+    ui.horizontal_wrapped(|ui| {
+        ui.label("Envelope (Hex/Dec/Oct) — SB:")
+            .on_hover_text("MLLP framing wrapper bytes: Start Block (SB), End Data (ED), and End Block (EB)");
+        ui.add(styled_singleline_text_edit(&mut env_ui.sb_input, 54.0, Some("0x0B")))
+            .on_hover_text(
+                "Start Block (SB) framing byte prepended before each HL7 message (default 0x0B / VT). Accepts Hex (0x0B), Decimal (11), or Octal (0o13).",
+            );
         ui.label("ED:");
-        ui.add(egui::TextEdit::singleline(&mut env_ui.ed_input).desired_width(48.0));
+        ui.add(styled_singleline_text_edit(&mut env_ui.ed_input, 54.0, Some("0x1C")))
+            .on_hover_text(
+                "End Data (ED) framing byte appended after each HL7 message (default 0x1C / FS). Accepts Hex (0x1C), Decimal (28), or Octal (0o34).",
+            );
         ui.label("EB:");
-        ui.add(egui::TextEdit::singleline(&mut env_ui.eb_input).desired_width(48.0));
-        if ui
-            .button(egui::RichText::new("Defaults"))
-            .on_hover_text("Restore 0x0B / 0x1C / 0x0D (NET-1)")
+        ui.add(styled_singleline_text_edit(&mut env_ui.eb_input, 54.0, Some("0x0D")))
+            .on_hover_text(
+                "End Block (EB) trailing byte after End Data (default 0x0D / CR). Accepts Hex (0x0D), Decimal (13), or Octal (0o15).",
+            );
+        if icon_labeled_button(ui, IconKind::Revert, "Defaults", true, None)
+            .on_hover_text("Restore standard MLLP framing bytes (0x0B / 0x1C / 0x0D)")
             .clicked()
         {
             env_ui.reset_defaults();
@@ -1075,13 +1188,24 @@ fn show_sender_tab_ui(
     let mut load_prof = false;
 
     // Profile bar (NET-20)
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.label("Profile:");
-        ui.text_edit_singleline(&mut net.sender_profile.name);
-        if ui.button("Save Profile...").clicked() {
+        ui.add(styled_singleline_text_edit(
+            &mut net.sender_profile.name,
+            180.0,
+            Some("Profile name"),
+        ))
+        .on_hover_text("Name used when saving or loading this Client Sender profile as TOML");
+        if icon_labeled_button(ui, IconKind::Save, "Save Profile...", true, None)
+            .on_hover_text("Save the current Client Sender configuration to a .toml profile file")
+            .clicked()
+        {
             save_prof = true;
         }
-        if ui.button("Load Profile...").clicked() {
+        if icon_labeled_button(ui, IconKind::Open, "Load Profile...", true, None)
+            .on_hover_text("Load a saved Client Sender .toml profile file")
+            .clicked()
+        {
             load_prof = true;
         }
     });
@@ -1096,9 +1220,11 @@ fn show_sender_tab_ui(
         if validated_text_edit(
             ui,
             &mut net.sender_profile.host,
-            150.0,
+            165.0,
+            Some("127.0.0.1"),
             NumericFilter::None,
             validation.host.as_deref(),
+            "Destination hostname or IP address of the remote MLLP receiver (e.g. 127.0.0.1 or engine.local)",
             &palette,
         )
         .lost_focus()
@@ -1110,9 +1236,11 @@ fn show_sender_tab_ui(
         if validated_text_edit(
             ui,
             &mut net.sender_port_input,
-            64.0,
+            68.0,
+            Some("7772"),
             NumericFilter::DigitsOnly,
             validation.port.as_deref(),
+            "Destination TCP port on the remote MLLP receiver (1–65535)",
             &palette,
         )
         .changed()
@@ -1125,9 +1253,11 @@ fn show_sender_tab_ui(
         if validated_text_edit(
             ui,
             &mut net.sender_connect_timeout_input,
-            56.0,
+            60.0,
+            Some("10"),
             NumericFilter::UnsignedDecimal,
             validation.connect_timeout.as_deref(),
+            "Maximum seconds to wait for the TCP/TLS connection handshake before failing (> 0, up to 300s)",
             &palette,
         )
         .changed()
@@ -1145,9 +1275,11 @@ fn show_sender_tab_ui(
         if validated_text_edit(
             ui,
             &mut net.sender_delay_connect_input,
-            56.0,
+            60.0,
+            Some("0"),
             NumericFilter::UnsignedDecimal,
             validation.delay_after_connect.as_deref(),
+            "Optional pause in seconds after connecting before transmitting the first HL7 message (0–3600s)",
             &palette,
         )
         .changed()
@@ -1160,9 +1292,11 @@ fn show_sender_tab_ui(
         if validated_text_edit(
             ui,
             &mut net.sender_delay_between_input,
-            56.0,
+            60.0,
+            Some("0"),
             NumericFilter::UnsignedDecimal,
             validation.delay_between_records.as_deref(),
+            "Optional throttle delay in seconds between consecutive messages in the batch (0–3600s)",
             &palette,
         )
         .changed()
@@ -1182,24 +1316,29 @@ fn show_sender_tab_ui(
             &mut net.send_scope_mode,
             SendScopeUiMode::All,
             "All Records",
-        );
+        )
+        .on_hover_text("Transmit every HL7 message currently loaded in the session");
         ui.radio_value(
             &mut net.send_scope_mode,
             SendScopeUiMode::Selected,
             "Selected Only",
-        );
+        )
+        .on_hover_text("Transmit only the message(s) currently selected in the left message list");
         ui.radio_value(
             &mut net.send_scope_mode,
             SendScopeUiMode::Range,
             "Range (1-based):",
-        );
+        )
+        .on_hover_text("Transmit an inclusive 1-based slice of messages by list position");
         if net.send_scope_mode == SendScopeUiMode::Range {
             if validated_text_edit(
                 ui,
                 &mut net.range_start_input,
-                56.0,
+                60.0,
+                Some("1"),
                 NumericFilter::DigitsOnly,
                 validation.range.as_deref(),
+                "First 1-based message number in the range to send",
                 &palette,
             )
             .changed()
@@ -1212,9 +1351,11 @@ fn show_sender_tab_ui(
             if validated_text_edit(
                 ui,
                 &mut net.range_end_input,
-                56.0,
+                60.0,
+                Some("1"),
                 NumericFilter::DigitsOnly,
                 validation.range.as_deref(),
+                "Last 1-based message number in the range to send (inclusive)",
                 &palette,
             )
             .changed()
@@ -1227,14 +1368,20 @@ fn show_sender_tab_ui(
     });
 
     // Outgoing MSH-10 / MSH-7 rewrite toggles (NET-31, NET-32)
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.checkbox(
             &mut net.sender_profile.rewrite_control_id,
             "Rewrite outgoing MSH-10 Control ID",
+        )
+        .on_hover_text(
+            "Generate a unique outgoing MSH-10 Message Control ID per send so downstream engines do not reject replayed messages as duplicates",
         );
         ui.checkbox(
             &mut net.sender_profile.refresh_timestamp,
             "Refresh outgoing MSH-7 Timestamp",
+        )
+        .on_hover_text(
+            "Overwrite outgoing MSH-7 Date/Time of Message with the current local timestamp at send time (without modifying the loaded session copy)",
         );
     });
 
@@ -1242,22 +1389,27 @@ fn show_sender_tab_ui(
 
     // ACK & Retry Policy (NET-25..NET-29)
     ui.horizontal_wrapped(|ui| {
-        ui.checkbox(&mut net.sender_profile.wait_for_ack, "Wait for ACK");
+        ui.checkbox(&mut net.sender_profile.wait_for_ack, "Wait for ACK")
+            .on_hover_text(
+                "Wait for an MLLP acknowledgement response after each message before sending the next",
+            );
         if net.sender_profile.wait_for_ack {
             ui.checkbox(
                 &mut net.sender_profile.respect_ack_modes,
                 "Respect MSH-15 / MSH-16 ACK rules",
             )
             .on_hover_text(
-                "Opt-in Enhanced Mode: skip waiting for an ACK when MSH-15/16=NE instead of timing out.",
+                "Honor HL7 Enhanced Mode rules: skip waiting for an ACK when outgoing MSH-15/16 is NE instead of timing out",
             );
             ui.label("Max Wait (s):");
             if validated_text_edit(
                 ui,
                 &mut net.sender_ack_wait_input,
-                56.0,
+                60.0,
+                Some("30"),
                 NumericFilter::UnsignedDecimal,
                 validation.ack_wait.as_deref(),
+                "Maximum seconds to wait for an ACK/NAK response before treating the send as timed out (> 0, up to 600s)",
                 &palette,
             )
             .changed()
@@ -1267,37 +1419,68 @@ fn show_sender_tab_ui(
                 }
             }
         }
-        ui.checkbox(&mut net.view_received_acks, "View Received ACKs");
+        ui.checkbox(&mut net.view_received_acks, "View Received ACKs")
+            .on_hover_text(
+                "Record received ACK, NAK, and malformed MLLP responses in the ACK Log tab",
+            );
         if net.view_received_acks {
-            ui.checkbox(&mut net.modal_ack_popups, "Modal ACK Pop-ups");
+            ui.checkbox(&mut net.modal_ack_popups, "Modal ACK Pop-ups")
+                .on_hover_text(
+                    "Display a modal alert dialog for each received ACK/NAK response (handy for inspecting single test sends)",
+                );
         }
     });
 
     if net.sender_profile.wait_for_ack {
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             ui.label("ACK Evaluation Mode:");
             let is_hl7 = matches!(net.sender_profile.ack_mode, AckMode::Hl7);
             let is_simple = matches!(net.sender_profile.ack_mode, AckMode::Simple { .. });
             let is_legacy = matches!(net.sender_profile.ack_mode, AckMode::LegacySubstring { .. });
-            if ui.radio(is_hl7, "HL7 MSA").clicked() {
+            if ui
+                .radio(is_hl7, "HL7 MSA")
+                .on_hover_text(
+                    "Parse the HL7 MSA segment: treat MSA-1 AA/CA as ACK and AE/AR/CE/CR as NAK, and warn on MSA-2/MSH-10 control-ID mismatch",
+                )
+                .clicked()
+            {
                 net.sender_profile.ack_mode = AckMode::Hl7;
             }
-            if ui.radio(is_simple, "Simple Hex").clicked() {
+            if ui
+                .radio(is_simple, "Simple Hex")
+                .on_hover_text(
+                    "Compare raw response bytes against an exact expected hex sequence (e.g. single-byte 0x06 ACK)",
+                )
+                .clicked()
+            {
                 net.sender_profile.ack_mode = AckMode::Simple {
                     expected_bytes: parse_hex_input(&net.simple_ack_hex_input),
                 };
             }
-            if ui.radio(is_legacy, "Legacy Substring").clicked() {
+            if ui
+                .radio(is_legacy, "Legacy Substring")
+                .on_hover_text(
+                    "Treat a response as ACK if its payload text contains a required literal substring (e.g. MSA|AA)",
+                )
+                .clicked()
+            {
                 net.sender_profile.ack_mode = AckMode::LegacySubstring {
                     token: net.legacy_ack_token_input.clone(),
                 };
             }
         });
         if matches!(net.sender_profile.ack_mode, AckMode::Simple { .. }) {
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 ui.label("Expected Hex Bytes:");
                 if ui
-                    .text_edit_singleline(&mut net.simple_ack_hex_input)
+                    .add(styled_singleline_text_edit(
+                        &mut net.simple_ack_hex_input,
+                        200.0,
+                        Some("0b 06 1c 0d"),
+                    ))
+                    .on_hover_text(
+                        "Space-separated hex/dec/oct bytes that constitute a valid Simple Hex ACK response",
+                    )
                     .changed()
                 {
                     net.sender_profile.ack_mode = AckMode::Simple {
@@ -1306,10 +1489,17 @@ fn show_sender_tab_ui(
                 }
             });
         } else if matches!(net.sender_profile.ack_mode, AckMode::LegacySubstring { .. }) {
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
                 ui.label("Required Substring Token:");
                 if ui
-                    .text_edit_singleline(&mut net.legacy_ack_token_input)
+                    .add(styled_singleline_text_edit(
+                        &mut net.legacy_ack_token_input,
+                        200.0,
+                        Some("MSA|AA"),
+                    ))
+                    .on_hover_text(
+                        "Case-sensitive literal text that must appear in the response payload to classify it as an ACK",
+                    )
                     .changed()
                 {
                     net.sender_profile.ack_mode = AckMode::LegacySubstring {
@@ -1319,35 +1509,47 @@ fn show_sender_tab_ui(
             });
         }
 
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             ui.label("On NAK / Timeout:");
             egui::ComboBox::from_id_salt("nak_action_combo")
-                .selected_text(format!("{:?}", net.sender_profile.nak_action))
+                .selected_text(nak_action_label(net.sender_profile.nak_action))
+                .width(185.0)
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
                         &mut net.sender_profile.nak_action,
                         NakAction::Resend,
                         "Resend record",
-                    );
+                    )
+                    .on_hover_text("Retry sending the same message over the existing connection");
                     ui.selectable_value(
                         &mut net.sender_profile.nak_action,
                         NakAction::ResetAndResend,
                         "Reset connection & resend",
+                    )
+                    .on_hover_text(
+                        "Close and reconnect the TCP/TLS socket before retrying the message",
                     );
                     ui.selectable_value(
                         &mut net.sender_profile.nak_action,
                         NakAction::Skip,
                         "Skip record",
-                    );
-                });
+                    )
+                    .on_hover_text("Skip this message and continue with the next message");
+                })
+                .response
+                .on_hover_text(
+                    "Action taken immediately when a message receives a NAK or times out waiting for an ACK",
+                );
 
             ui.label("Max Tries:");
             if validated_text_edit(
                 ui,
                 &mut net.sender_max_tries_input,
-                46.0,
+                52.0,
+                Some("3"),
                 NumericFilter::DigitsOnly,
                 validation.max_tries.as_deref(),
+                "Maximum attempts per message (1–100) before triggering the 'When Exceeded' fallback action",
                 &palette,
             )
             .changed()
@@ -1359,67 +1561,109 @@ fn show_sender_tab_ui(
 
             ui.label("When Exceeded:");
             egui::ComboBox::from_id_salt("max_tries_action_combo")
-                .selected_text(format!("{:?}", net.sender_profile.max_tries_action))
+                .selected_text(max_tries_action_label(net.sender_profile.max_tries_action))
+                .width(195.0)
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
                         &mut net.sender_profile.max_tries_action,
                         MaxTriesAction::ResetAndResend,
                         "Reset connection & resend (restart counter)",
+                    )
+                    .on_hover_text(
+                        "Reconnect the socket, reset the attempt counter, and continue retrying",
                     );
                     ui.selectable_value(
                         &mut net.sender_profile.max_tries_action,
                         MaxTriesAction::Skip,
                         "Skip record",
-                    );
+                    )
+                    .on_hover_text("Skip the failed message and continue sending remaining messages");
                     ui.selectable_value(
                         &mut net.sender_profile.max_tries_action,
                         MaxTriesAction::CloseAndStop,
                         "Close & stop",
-                    );
-                });
+                    )
+                    .on_hover_text("Close the TCP/TLS connection and halt the send batch");
+                })
+                .response
+                .on_hover_text(
+                    "Fallback action when a message exhausts Max Tries without receiving a valid ACK",
+                );
         });
     }
 
     // Collapsible TLS 1.2/1.3 & mTLS section (NET-34, D-23)
-    egui::CollapsingHeader::new("TLS 1.2 / 1.3 & Mutual TLS (mTLS)")
-        .default_open(net.sender_profile.tls.enabled)
-        .show(ui, |ui| {
-            ui.checkbox(&mut net.sender_profile.tls.enabled, "Enable TLS 1.2/1.3");
-            if net.sender_profile.tls.enabled {
-                ui.horizontal(|ui| {
-                    let mut sni = net
-                        .sender_profile
-                        .tls
-                        .sni_server_name
-                        .clone()
-                        .unwrap_or_default();
-                    ui.label("SNI Override (optional):");
-                    if ui.text_edit_singleline(&mut sni).changed() {
-                        net.sender_profile.tls.sni_server_name =
-                            (!sni.trim().is_empty()).then(|| sni.trim().to_string());
-                    }
-                });
-                ui.checkbox(
-                    &mut net.sender_profile.tls.allow_invalid_certificates,
-                    "Allow invalid / self-signed certificates (local testing only)",
-                );
-                show_optional_path_picker(
-                    ui,
-                    "Custom CA Bundle (PEM):",
-                    &mut net.sender_profile.tls.custom_ca_path,
-                );
-                show_optional_path_picker(
-                    ui,
-                    "mTLS Client Certificate (PEM):",
-                    &mut net.sender_profile.tls.client_cert_path,
-                );
-                show_optional_path_picker(
-                    ui,
-                    "mTLS Client Private Key (PEM):",
-                    &mut net.sender_profile.tls.client_key_path,
-                );
-            }
-        });
+    let tls_enabled = net.sender_profile.tls.enabled;
+    let tls_header = egui::CollapsingHeader::new(if tls_enabled {
+        "TLS 1.2 / 1.3 & Mutual TLS (mTLS) — Enabled"
+    } else {
+        "TLS 1.2 / 1.3 & Mutual TLS (mTLS)"
+    })
+    .id_salt("sender_tls_section")
+    .default_open(tls_enabled)
+    .show(ui, |ui| {
+        show_tls_header_label(ui, net.sender_profile.tls.enabled, &palette);
+        ui.checkbox(&mut net.sender_profile.tls.enabled, "Enable TLS 1.2/1.3")
+            .on_hover_text(
+                "Encrypt the outbound MLLP connection using TLS 1.2 or TLS 1.3 (rustls)",
+            );
+        if net.sender_profile.tls.enabled {
+            ui.horizontal_wrapped(|ui| {
+                let mut sni = net
+                    .sender_profile
+                    .tls
+                    .sni_server_name
+                    .clone()
+                    .unwrap_or_default();
+                ui.label("SNI Override (optional):");
+                if ui
+                    .add(styled_singleline_text_edit(
+                        &mut sni,
+                        220.0,
+                        Some("e.g. mllp.hospital.local"),
+                    ))
+                    .on_hover_text(
+                        "Override the TLS Server Name Indication (SNI) hostname sent during handshake (useful when connecting by IP address)",
+                    )
+                    .changed()
+                {
+                    net.sender_profile.tls.sni_server_name =
+                        (!sni.trim().is_empty()).then(|| sni.trim().to_string());
+                }
+            });
+            ui.checkbox(
+                &mut net.sender_profile.tls.allow_invalid_certificates,
+                "Allow invalid / self-signed certificates (local testing only)",
+            )
+            .on_hover_text(
+                "Bypass server certificate chain and hostname verification. Use strictly for local or test MLLP listeners.",
+            );
+            show_optional_path_picker(
+                ui,
+                "Custom CA Bundle (PEM):",
+                &mut net.sender_profile.tls.custom_ca_path,
+                Some("Path to CA bundle (.pem)"),
+                "PEM-encoded root/intermediate CA certificate bundle used to verify the remote MLLP server certificate",
+            );
+            show_optional_path_picker(
+                ui,
+                "mTLS Client Certificate (PEM):",
+                &mut net.sender_profile.tls.client_cert_path,
+                Some("Path to client cert (.pem)"),
+                "PEM-encoded client certificate chain presented to the server for mutual TLS (mTLS) authentication",
+            );
+            show_optional_path_picker(
+                ui,
+                "mTLS Client Private Key (PEM):",
+                &mut net.sender_profile.tls.client_key_path,
+                Some("Path to client key (.pem)"),
+                "PEM-encoded private key matching the mTLS client certificate",
+            );
+        }
+    });
+    tls_header.header_response.on_hover_text(
+        "Expand to configure outbound TLS 1.2/1.3 encryption, custom CA verification, and client certificates (mTLS)",
+    );
 
     ui.separator();
 
@@ -1429,26 +1673,46 @@ fn show_sender_tab_ui(
     let sender_valid = net.validate_sender_inputs();
     let can_start_send = is_idle && sender_valid.is_valid();
     ui.horizontal_wrapped(|ui| {
-        let mut send_btn = ui.add_enabled(can_start_send, egui::Button::new("Start Send"));
+        let mut send_btn = icon_labeled_button(
+            ui,
+            IconKind::Play,
+            "Start Send",
+            can_start_send,
+            Some(palette.accent_green),
+        )
+        .on_hover_text("Connect and transmit the configured HL7 message scope over MLLP");
         if let Some(err) = sender_valid.first_error() {
             send_btn = send_btn.on_disabled_hover_text(err);
+        } else if !is_idle {
+            send_btn = send_btn.on_disabled_hover_text("A send batch is already in progress");
         }
         if send_btn.clicked() {
             start_clicked = true;
         }
         if is_paused {
-            if ui.button("Resume").clicked() {
+            if icon_labeled_button(ui, IconKind::Play, "Resume", true, Some(palette.accent))
+                .on_hover_text("Resume sending the paused HL7 batch")
+                .clicked()
+            {
                 resume_clicked = true;
             }
-        } else if ui
-            .add_enabled(!is_idle, egui::Button::new("Pause"))
+        } else if icon_labeled_button(ui, IconKind::Pause, "Pause", !is_idle, Some(palette.accent))
+            .on_hover_text("Pause the send batch after the current in-flight message completes")
+            .on_disabled_hover_text("Start sending before pausing")
             .clicked()
         {
             pause_clicked = true;
         }
-        if ui
-            .add_enabled(!is_idle, egui::Button::new("Stop"))
-            .clicked()
+        if icon_labeled_button(
+            ui,
+            IconKind::Stop,
+            "Stop",
+            !is_idle,
+            Some(palette.accent_red),
+        )
+        .on_hover_text("Stop transmission immediately and close the outbound MLLP connection")
+        .on_disabled_hover_text("No active send batch to stop")
+        .clicked()
         {
             stop_clicked = true;
         }
@@ -1461,7 +1725,10 @@ fn show_sender_tab_ui(
             net.progress_attempts,
             net.progress_resets,
             net.last_result
-        ));
+        ))
+        .on_hover_text(
+            "Live outbound sender state, batch progress, retry attempts, and connection resets",
+        );
     });
     if let Some(err) = sender_valid.first_error() {
         ui.colored_label(palette.accent_red, format!("Validation: {err}"));
@@ -1524,13 +1791,24 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
     let mut load_prof = false;
 
     // Profile bar (NET-10)
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.label("Profile:");
-        ui.text_edit_singleline(&mut net.listener_profile.name);
-        if ui.button("Save Profile...").clicked() {
+        ui.add(styled_singleline_text_edit(
+            &mut net.listener_profile.name,
+            180.0,
+            Some("Profile name"),
+        ))
+        .on_hover_text("Name used when saving or loading this Server Listener profile as TOML");
+        if icon_labeled_button(ui, IconKind::Save, "Save Profile...", true, None)
+            .on_hover_text("Save the current Server Listener configuration to a .toml profile file")
+            .clicked()
+        {
             save_prof = true;
         }
-        if ui.button("Load Profile...").clicked() {
+        if icon_labeled_button(ui, IconKind::Open, "Load Profile...", true, None)
+            .on_hover_text("Load a saved Server Listener .toml profile file")
+            .clicked()
+        {
             load_prof = true;
         }
     });
@@ -1539,15 +1817,17 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
     let palette = ThemePalette::for_visuals(ui.visuals());
     let validation = net.validate_listener_inputs();
 
-    // Bind address & Port (NET-10, NET-11, AGENTS §9)
+    // Bind address & Port (NET-10, NET-11)
     ui.horizontal_wrapped(|ui| {
         ui.label("Bind Address:");
         if validated_text_edit(
             ui,
             &mut net.listener_profile.bind_address,
-            140.0,
+            155.0,
+            Some("127.0.0.1"),
             NumericFilter::None,
             validation.bind_address.as_deref(),
+            "Local IP interface to bind (defaults to 127.0.0.1 loopback; binding 0.0.0.0 or a LAN IP prompts for confirmation)",
             &palette,
         )
         .lost_focus()
@@ -1559,9 +1839,11 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
         if validated_text_edit(
             ui,
             &mut net.listener_port_input,
-            64.0,
+            68.0,
+            Some("7772"),
             NumericFilter::DigitsOnly,
             validation.port.as_deref(),
+            "Local TCP port to listen on for inbound MLLP connections (1–65535)",
             &palette,
         )
         .changed()
@@ -1573,6 +1855,9 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
         ui.checkbox(
             &mut net.auto_scroll_received,
             "Auto-scroll record list on receive",
+        )
+        .on_hover_text(
+            "Automatically scroll to and select newly received HL7 messages in the left message list",
         );
     });
 
@@ -1582,13 +1867,18 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
         ui,
         "Append Received Messages to Log File (optional):",
         &mut net.listener_profile.log_to_disk_path,
+        Some("Optional output log file path"),
+        "Append every inbound raw HL7 message to this file on disk as soon as it is received",
     );
 
     ui.separator();
 
     // ACK Settings (NET-15, NET-16)
-    ui.horizontal(|ui| {
-        ui.checkbox(&mut net.listener_profile.send_ack, "Send ACK");
+    ui.horizontal_wrapped(|ui| {
+        ui.checkbox(&mut net.listener_profile.send_ack, "Send ACK")
+            .on_hover_text(
+                "Automatically transmit an MLLP acknowledgement back to the sending peer for each received message",
+            );
         if net.listener_profile.send_ack {
             let is_gen = matches!(
                 net.listener_profile.ack_setting,
@@ -1602,16 +1892,32 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
                 net.listener_profile.ack_setting,
                 ListenerAckSetting::FromFile(_)
             );
-            if ui.radio(is_gen, "Generated HL7 ACK").clicked() {
+            if ui
+                .radio(is_gen, "Generated HL7 ACK")
+                .on_hover_text(
+                    "Build a valid HL7 ACK swapping MSH-3/4 with MSH-5/6 and echoing inbound MSH-10 into MSA-2",
+                )
+                .clicked()
+            {
                 net.listener_profile.ack_setting = ListenerAckSetting::GeneratedHl7 {
                     code: "AA".to_string(),
                 };
             }
-            if ui.radio(is_simple, "Simple Hex ACK").clicked() {
+            if ui
+                .radio(is_simple, "Simple Hex ACK")
+                .on_hover_text("Reply to every received message with a fixed hex byte sequence")
+                .clicked()
+            {
                 net.listener_profile.ack_setting =
                     ListenerAckSetting::SimpleHex("0b 06 1c 0d".to_string());
             }
-            if ui.radio(is_file, "ACK from File").clicked() {
+            if ui
+                .radio(is_file, "ACK from File")
+                .on_hover_text(
+                    "Reply to every received message with the static raw payload from a file on disk",
+                )
+                .clicked()
+            {
                 net.listener_profile.ack_setting =
                     ListenerAckSetting::FromFile(PathBuf::from("custom_ack.txt"));
             }
@@ -1623,29 +1929,50 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
             &mut net.listener_profile.respect_ack_modes,
             "Respect MSH-15 / MSH-16 ACK rules",
         )
-        .on_hover_text("Opt-in Enhanced Mode: suppress Auto-ACK when inbound MSH-15/16=NE.");
+        .on_hover_text(
+            "Honor HL7 Enhanced Mode rules: suppress Auto-ACK when inbound MSH-15/16 is NE",
+        );
         match &mut net.listener_profile.ack_setting {
             ListenerAckSetting::GeneratedHl7 { code } => {
                 ui.horizontal_wrapped(|ui| {
                     ui.label("MSA-1 ACK Code:");
-                    ui.radio_value(code, "AA".to_string(), "AA (Accept)");
-                    ui.radio_value(code, "AE".to_string(), "AE (Error)");
-                    ui.radio_value(code, "AR".to_string(), "AR (Reject)");
+                    ui.radio_value(code, "AA".to_string(), "AA (Accept)")
+                        .on_hover_text("Original Mode: Application Accept (positive ACK)");
+                    ui.radio_value(code, "AE".to_string(), "AE (Error)")
+                        .on_hover_text("Original Mode: Application Error (negative NAK)");
+                    ui.radio_value(code, "AR".to_string(), "AR (Reject)")
+                        .on_hover_text("Original Mode: Application Reject (negative NAK)");
                     ui.separator();
-                    ui.radio_value(code, "CA".to_string(), "CA (Commit Accept)");
-                    ui.radio_value(code, "CE".to_string(), "CE (Commit Error)");
-                    ui.radio_value(code, "CR".to_string(), "CR (Commit Reject)");
+                    ui.radio_value(code, "CA".to_string(), "CA (Commit Accept)")
+                        .on_hover_text("Enhanced Mode: Commit Accept (positive ACK)");
+                    ui.radio_value(code, "CE".to_string(), "CE (Commit Error)")
+                        .on_hover_text("Enhanced Mode: Commit Error (negative NAK)");
+                    ui.radio_value(code, "CR".to_string(), "CR (Commit Reject)")
+                        .on_hover_text("Enhanced Mode: Commit Reject (negative NAK)");
                 });
             }
             ListenerAckSetting::SimpleHex(hex_str) => {
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.label("Hex Bytes:");
-                    ui.text_edit_singleline(hex_str);
+                    ui.add(styled_singleline_text_edit(
+                        hex_str,
+                        200.0,
+                        Some("0b 06 1c 0d"),
+                    ))
+                    .on_hover_text(
+                        "Space-separated hex/dec/oct bytes sent back as the acknowledgement for each inbound message",
+                    );
                 });
             }
             ListenerAckSetting::FromFile(path) => {
                 let mut opt = Some(path.clone());
-                show_optional_path_picker(ui, "ACK File Path:", &mut opt);
+                show_optional_path_picker(
+                    ui,
+                    "ACK File Path:",
+                    &mut opt,
+                    Some("Path to static ACK file"),
+                    "File whose raw contents are sent back as the MLLP acknowledgement for each inbound message",
+                );
                 if let Some(p) = opt {
                     *path = p;
                 }
@@ -1654,38 +1981,63 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
     }
 
     // Collapsible TLS 1.2/1.3 & mTLS section (NET-17, D-23)
-    egui::CollapsingHeader::new("TLS 1.2 / 1.3 & Mutual TLS (mTLS)")
-        .default_open(net.listener_profile.tls.enabled)
-        .show(ui, |ui| {
-            ui.checkbox(&mut net.listener_profile.tls.enabled, "Enable TLS 1.2/1.3");
-            if net.listener_profile.tls.enabled {
-                show_optional_path_picker(
-                    ui,
-                    "Server Certificate Chain (PEM):",
-                    &mut net.listener_profile.tls.cert_chain_path,
-                );
-                show_optional_path_picker(
-                    ui,
-                    "Server Private Key (PEM):",
-                    &mut net.listener_profile.tls.private_key_path,
-                );
-                show_optional_path_picker(
-                    ui,
-                    "Client CA Bundle for mTLS (optional PEM):",
-                    &mut net.listener_profile.tls.client_ca_path,
-                );
-            }
-        });
+    let tls_enabled = net.listener_profile.tls.enabled;
+    let tls_header = egui::CollapsingHeader::new(if tls_enabled {
+        "TLS 1.2 / 1.3 & Mutual TLS (mTLS) — Enabled"
+    } else {
+        "TLS 1.2 / 1.3 & Mutual TLS (mTLS)"
+    })
+    .id_salt("listener_tls_section")
+    .default_open(tls_enabled)
+    .show(ui, |ui| {
+        show_tls_header_label(ui, net.listener_profile.tls.enabled, &palette);
+        ui.checkbox(&mut net.listener_profile.tls.enabled, "Enable TLS 1.2/1.3")
+            .on_hover_text(
+                "Require TLS 1.2 or TLS 1.3 encryption on all inbound MLLP connections",
+            );
+        if net.listener_profile.tls.enabled {
+            show_optional_path_picker(
+                ui,
+                "Server Certificate Chain (PEM):",
+                &mut net.listener_profile.tls.cert_chain_path,
+                Some("Path to server cert (.pem)"),
+                "PEM-encoded server certificate chain presented to connecting MLLP clients",
+            );
+            show_optional_path_picker(
+                ui,
+                "Server Private Key (PEM):",
+                &mut net.listener_profile.tls.private_key_path,
+                Some("Path to server key (.pem)"),
+                "PEM-encoded private key matching the server certificate chain",
+            );
+            show_optional_path_picker(
+                ui,
+                "Client CA Bundle for mTLS (optional PEM):",
+                &mut net.listener_profile.tls.client_ca_path,
+                Some("Optional client CA bundle (.pem)"),
+                "Optional PEM-encoded CA bundle; when set, connecting clients must authenticate with a valid client certificate (mTLS)",
+            );
+        }
+    });
+    tls_header.header_response.on_hover_text(
+        "Expand to configure inbound TLS 1.2/1.3 server certificates and optional client CA verification (mTLS)",
+    );
 
     ui.separator();
 
     // Start / Stop Controls (NET-11)
     let listener_valid = net.validate_listener_inputs();
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         if !net.listener_running {
-            let mut start_btn = ui.add_enabled(
+            let mut start_btn = icon_labeled_button(
+                ui,
+                IconKind::Listen,
+                "Start Listening",
                 listener_valid.is_valid(),
-                egui::Button::new("Start Listening"),
+                Some(palette.accent_green),
+            )
+            .on_hover_text(
+                "Bind the local TCP/TLS listener socket and begin accepting inbound MLLP connections",
             );
             if let Some(err) = listener_valid.first_error() {
                 start_btn = start_btn.on_disabled_hover_text(err);
@@ -1693,13 +2045,23 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
             if start_btn.clicked() {
                 start_clicked = true;
             }
-        } else if ui.button("Stop Listening").clicked() {
+        } else if icon_labeled_button(
+            ui,
+            IconKind::Stop,
+            "Stop Listening",
+            true,
+            Some(palette.accent_red),
+        )
+        .on_hover_text("Stop accepting new connections and disconnect all active inbound clients")
+        .clicked()
+        {
             stop_clicked = true;
         }
         ui.label(format!(
             "Total Records Received: {}",
             net.total_received_count
-        ));
+        ))
+        .on_hover_text("Cumulative HL7 messages received across all inbound listener connections");
     });
     if let Some(err) = listener_valid.first_error() {
         ui.colored_label(palette.accent_red, format!("Validation: {err}"));
@@ -1750,12 +2112,42 @@ fn show_listener_tab_ui(ui: &mut Ui, ctx: &Context, net: &mut NetworkPanelState)
 }
 
 fn show_connections_tab_ui(ui: &mut Ui, net: &mut NetworkPanelState) {
-    ui.horizontal(|ui| {
-        ui.strong(format!("Client Connections ({})", net.connections.len()));
+    let palette = ThemePalette::for_visuals(ui.visuals());
+    let active_count = net.connections.iter().filter(|c| c.active).count();
+    let has_closed = net.connections.iter().any(|c| !c.active);
+
+    ui.horizontal_wrapped(|ui| {
+        ui.strong(format!(
+            "Client Connections ({} total, {} active)",
+            net.connections.len(),
+            active_count
+        ));
         ui.label(format!(
             "Total Messages Received: {}",
             net.total_received_count
-        ));
+        ))
+        .on_hover_text("Total valid HL7 messages received across all inbound peer connections");
+        ui.separator();
+        if icon_labeled_button(
+            ui,
+            IconKind::Disconnect,
+            "Disconnect All",
+            net.listener_running,
+            Some(palette.accent_red),
+        )
+        .on_hover_text("Stop the MLLP listener and close all active inbound client connections")
+        .on_disabled_hover_text("Listener is not currently running")
+        .clicked()
+        {
+            net.stop_listener();
+        }
+        if icon_labeled_button(ui, IconKind::Delete, "Clear Closed", has_closed, None)
+            .on_hover_text("Remove closed historical connections from this table")
+            .on_disabled_hover_text("No closed connections to clear")
+            .clicked()
+        {
+            net.connections.retain(|c| c.active);
+        }
     });
     ui.separator();
 
@@ -1767,25 +2159,32 @@ fn show_connections_tab_ui(ui: &mut Ui, net: &mut NetworkPanelState) {
         .column(Column::initial(90.0))
         .column(Column::initial(90.0))
         .column(Column::remainder())
-        .header(20.0, |mut h| {
+        .header(CONTROL_HEIGHT, |mut h| {
             h.col(|ui| {
-                ui.strong("ID");
+                ui.strong("ID")
+                    .on_hover_text("Sequential connection identifier assigned by the listener");
             });
             h.col(|ui| {
-                ui.strong("Remote Peer");
+                ui.strong("Remote Peer")
+                    .on_hover_text("Remote client IP address and ephemeral TCP port");
             });
             h.col(|ui| {
-                ui.strong("Status");
+                ui.strong("Status").on_hover_text(
+                    "Whether the remote TCP/TLS socket is currently Active or Closed",
+                );
             });
             h.col(|ui| {
-                ui.strong("Messages");
+                ui.strong("Messages").on_hover_text(
+                    "Count of valid MLLP-framed HL7 messages received on this connection",
+                );
             });
             h.col(|ui| {
-                ui.strong("Bytes / Info");
+                ui.strong("Bytes / Info")
+                    .on_hover_text("Total payload bytes received and any framing or socket errors");
             });
         })
         .body(|body| {
-            body.rows(18.0, net.connections.len(), |mut row| {
+            body.rows(22.0, net.connections.len(), |mut row| {
                 let c = &net.connections[row.index()];
                 row.col(|ui| {
                     ui.label(format!("#{}", c.conn_id));
@@ -1795,7 +2194,7 @@ fn show_connections_tab_ui(ui: &mut Ui, net: &mut NetworkPanelState) {
                 });
                 row.col(|ui| {
                     if c.active {
-                        ui.colored_label(Color32::LIGHT_GREEN, "Active");
+                        ui.colored_label(palette.accent_green, "Active");
                     } else {
                         ui.weak("Closed");
                     }
@@ -1817,6 +2216,7 @@ fn show_connections_tab_ui(ui: &mut Ui, net: &mut NetworkPanelState) {
 fn show_ack_log_tab_ui(ui: &mut Ui, net: &mut NetworkPanelState) {
     let mut export_history = false;
     let palette = ThemePalette::for_visuals(ui.visuals());
+    let has_ack_entries = !net.ack_log.is_empty() || net.total_ack_responses > 0;
     ui.horizontal_wrapped(|ui| {
         ui.strong(format!("ACK / Traffic Log ({})", net.ack_log.len()));
         if net.ack_log_dropped_oldest > 0 {
@@ -1830,19 +2230,38 @@ fn show_ack_log_tab_ui(ui: &mut Ui, net: &mut NetworkPanelState) {
             ui.colored_label(
                 palette.accent_red,
                 format!("Malformed: {}", net.total_malformed),
+            )
+            .on_hover_text(
+                "Count of received packets with invalid MLLP framing or unexpected stray bytes",
             );
         }
-        if ui.small_button("Clear ACK Log").clicked() {
+        if icon_labeled_button(
+            ui,
+            IconKind::Delete,
+            "Clear Log",
+            has_ack_entries,
+            Some(palette.accent_red),
+        )
+        .on_hover_text("Clear all logged ACK, NAK, and malformed entries and reset counters")
+        .on_disabled_hover_text("ACK log is already empty")
+        .clicked()
+        {
             net.clear_ack_log();
         }
         ui.separator();
         ui.strong(format!("Send History ({})", net.send_history.len()));
-        if ui
-            .add_enabled(
-                !net.send_history.is_empty(),
-                egui::Button::new("Export History CSV..."),
-            )
-            .clicked()
+        if icon_labeled_button(
+            ui,
+            IconKind::Save,
+            "Export History CSV...",
+            !net.send_history.is_empty(),
+            None,
+        )
+        .on_hover_text(
+            "Export outbound send history (record index, MSH-10 control ID, timestamp, outcome, RTT ms, peer) to CSV",
+        )
+        .on_disabled_hover_text("Send at least one message to export send history")
+        .clicked()
         {
             export_history = true;
         }
@@ -1934,6 +2353,8 @@ fn show_non_loopback_confirm_window(ctx: &Context, net: &mut NetworkPanelState) 
         .resizable(false)
         .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
         .show(ctx, |ui| {
+            apply_unified_control_metrics(ui);
+            let palette = ThemePalette::for_visuals(ui.visuals());
             ui.label(strings::WARN_NON_LOOPBACK_BIND);
             ui.label(format!(
                 "Target bind address: {}:{}",
@@ -1941,10 +2362,24 @@ fn show_non_loopback_confirm_window(ctx: &Context, net: &mut NetworkPanelState) 
             ));
             ui.add_space(8.0);
             ui.horizontal(|ui| {
-                if ui.button("Bind Anyway").clicked() {
+                if icon_labeled_button(
+                    ui,
+                    IconKind::Listen,
+                    "Bind Anyway",
+                    true,
+                    Some(palette.accent_red),
+                )
+                .on_hover_text(
+                    "Proceed with binding the listener on a non-loopback network interface",
+                )
+                .clicked()
+                {
                     confirm = true;
                 }
-                if ui.button("Cancel").clicked() {
+                if icon_labeled_button(ui, IconKind::Close, "Cancel", true, None)
+                    .on_hover_text("Cancel starting the listener")
+                    .clicked()
+                {
                     cancel = true;
                 }
             });
@@ -1969,6 +2404,8 @@ fn show_modal_ack_alert_window(ctx: &Context, net: &mut NetworkPanelState) {
         .resizable(true)
         .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
         .show(ctx, |ui| {
+            apply_unified_control_metrics(ui);
+            let palette = ThemePalette::for_visuals(ui.visuals());
             ui.label(format!(
                 "Record #{} (Control ID: {})",
                 entry.record_index + 1,
@@ -1977,7 +2414,10 @@ fn show_modal_ack_alert_window(ctx: &Context, net: &mut NetworkPanelState) {
             ui.separator();
             ui.label(RichText::new(&entry.payload_text).monospace());
             ui.add_space(8.0);
-            if ui.button("OK").clicked() {
+            if icon_labeled_button(ui, IconKind::Check, "OK", true, Some(palette.accent))
+                .on_hover_text("Dismiss this ACK/NAK alert")
+                .clicked()
+            {
                 close = true;
             }
         });
@@ -1986,22 +2426,39 @@ fn show_modal_ack_alert_window(ctx: &Context, net: &mut NetworkPanelState) {
     }
 }
 
-fn show_optional_path_picker(ui: &mut Ui, label: &str, path_opt: &mut Option<PathBuf>) {
-    ui.horizontal(|ui| {
-        ui.label(label);
+fn show_optional_path_picker(
+    ui: &mut Ui,
+    label: &str,
+    path_opt: &mut Option<PathBuf>,
+    hint: Option<&str>,
+    tooltip: &str,
+) {
+    ui.horizontal_wrapped(|ui| {
+        ui.label(label).on_hover_text(tooltip);
         let mut text = path_opt
             .as_ref()
             .map_or_else(String::new, |p| p.display().to_string());
-        if ui.text_edit_singleline(&mut text).changed() {
+        if ui
+            .add(styled_singleline_text_edit(&mut text, 220.0, hint))
+            .on_hover_text(tooltip)
+            .changed()
+        {
             let trimmed = text.trim();
             *path_opt = (!trimmed.is_empty()).then(|| PathBuf::from(trimmed));
         }
-        if ui.button("Browse...").clicked() {
+        if icon_labeled_button(ui, IconKind::Open, "Browse...", true, None)
+            .on_hover_text(format!("Choose a file for {}", label.trim_end_matches(':')))
+            .clicked()
+        {
             if let Some(p) = rfd::FileDialog::new().pick_file() {
                 *path_opt = Some(p);
             }
         }
-        if path_opt.is_some() && ui.small_button("Clear").clicked() {
+        if path_opt.is_some()
+            && icon_labeled_button(ui, IconKind::Close, "Clear", true, None)
+                .on_hover_text("Clear this file path")
+                .clicked()
+        {
             *path_opt = None;
         }
     });
@@ -2036,12 +2493,15 @@ fn filter_numeric_buffer(buf: &mut String, mode: NumericFilter) {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn validated_text_edit(
     ui: &mut Ui,
     buf: &mut String,
     width: f32,
+    hint: Option<&str>,
     filter: NumericFilter,
     error: Option<&str>,
+    tooltip: &str,
     palette: &ThemePalette,
 ) -> egui::Response {
     let mut resp = ui
@@ -2053,15 +2513,16 @@ fn validated_text_edit(
                 ui.visuals_mut().widgets.active.bg_stroke = err_stroke;
                 ui.visuals_mut().selection.stroke = err_stroke;
             }
-            ui.add(egui::TextEdit::singleline(buf).desired_width(width))
+            ui.add(styled_singleline_text_edit(buf, width, hint))
         })
         .inner;
     if resp.changed() {
         filter_numeric_buffer(buf, filter);
     }
-    if let Some(err) = error {
-        resp = resp.on_hover_text(err);
-    }
+    resp = match error {
+        Some(err) => resp.on_hover_text(format!("{err}\n\n{tooltip}")),
+        None => resp.on_hover_text(tooltip),
+    };
     resp
 }
 

@@ -81,6 +81,22 @@ pub enum IconKind {
     ReplaceOne,
     /// Replace-all icon (stacked target boxes with replace arrow).
     ReplaceAll,
+    /// Right-pointing play triangle (`Start Send`, `Resume`).
+    Play,
+    /// Two vertical pause bars (`Pause`).
+    Pause,
+    /// Crisp stop square (`Stop`, `Stop Listening`).
+    Stop,
+    /// Outbound send arrow / paper-plane (`Client Sender`).
+    Send,
+    /// Inbound receiver / broadcast antenna (`Server Listener`, `Start Listening`).
+    Listen,
+    /// Broken link / unplug (`Disconnect`).
+    Disconnect,
+    /// Traffic log lines (`ACK Log`).
+    Log,
+    /// Padlock (`TLS 1.2 / 1.3 & mTLS`).
+    Lock,
 }
 
 /// Standardized inline icon canvas size (`14.0 px`).
@@ -416,6 +432,79 @@ pub fn paint_icon(
             painter.line_segment([p(1.2, -3.4), p(4.4, -3.4)], thin);
             painter.line_segment([p(4.4, -3.4), p(4.4, -1.2)], thin);
         }
+        IconKind::Play => {
+            // Crisp right-pointing triangle outline
+            let tri = vec![p(-3.5, -4.6), p(4.8, 0.0), p(-3.5, 4.6), p(-3.5, -4.6)];
+            painter.add(egui::Shape::line(tri, stroke));
+        }
+        IconKind::Pause => {
+            // Two balanced vertical bars
+            let left = Rect::from_min_max(p(-4.2, -4.5), p(-1.4, 4.5));
+            let right = Rect::from_min_max(p(1.4, -4.5), p(4.2, 4.5));
+            painter.rect_stroke(left, CornerRadius::same(1), stroke, StrokeKind::Middle);
+            painter.rect_stroke(right, CornerRadius::same(1), stroke, StrokeKind::Middle);
+        }
+        IconKind::Stop => {
+            // Crisp stop square
+            let sq = Rect::from_min_max(p(-4.0, -4.0), p(4.0, 4.0));
+            painter.rect_stroke(sq, CornerRadius::same(1), stroke, StrokeKind::Middle);
+        }
+        IconKind::Send => {
+            // Outbound paper-plane / transmit glyph
+            let plane = vec![
+                p(-5.2, -0.8),
+                p(5.2, -4.6),
+                p(1.6, 5.0),
+                p(-0.6, 1.2),
+                p(-5.2, -0.8),
+            ];
+            painter.add(egui::Shape::line(plane, stroke));
+            painter.line_segment([p(-0.6, 1.2), p(5.0, -4.4)], thin);
+        }
+        IconKind::Listen => {
+            // Broadcast antenna / inbound signal arcs
+            painter.circle_filled(p(0.0, 1.0), 1.6 * s, fg);
+            painter.line_segment([p(0.0, 2.4), p(0.0, 5.4)], stroke);
+            let left_inner = vec![p(-2.6, -1.2), p(-3.4, 1.0), p(-2.6, 3.2)];
+            let right_inner = vec![p(2.6, -1.2), p(3.4, 1.0), p(2.6, 3.2)];
+            let left_outer = vec![p(-4.4, -3.0), p(-5.6, 1.0), p(-4.4, 4.6)];
+            let right_outer = vec![p(4.4, -3.0), p(5.6, 1.0), p(4.4, 4.6)];
+            painter.add(egui::Shape::line(left_inner, thin));
+            painter.add(egui::Shape::line(right_inner, thin));
+            painter.add(egui::Shape::line(left_outer, thin));
+            painter.add(egui::Shape::line(right_outer, thin));
+        }
+        IconKind::Disconnect => {
+            // Unplugged / severed link with diagonal slash
+            let left_plug = vec![p(-5.2, 1.4), p(-2.4, -1.4), p(-0.6, 0.4), p(-3.4, 3.2)];
+            let right_plug = vec![p(5.2, -1.4), p(2.4, 1.4), p(0.6, -0.4), p(3.4, -3.2)];
+            painter.add(egui::Shape::line(left_plug, thin));
+            painter.add(egui::Shape::line(right_plug, thin));
+            painter.line_segment([p(-4.8, -4.8), p(4.8, 4.8)], stroke);
+        }
+        IconKind::Log => {
+            // Document outline with 3 log rows
+            let doc = Rect::from_min_max(p(-4.6, -5.2), p(4.6, 5.2));
+            painter.rect_stroke(doc, CornerRadius::same(1), stroke, StrokeKind::Middle);
+            painter.line_segment([p(-2.6, -2.4), p(2.6, -2.4)], thin);
+            painter.line_segment([p(-2.6, 0.2), p(2.6, 0.2)], thin);
+            painter.line_segment([p(-2.6, 2.8), p(1.2, 2.8)], thin);
+        }
+        IconKind::Lock => {
+            // Padlock shackle + body
+            let shackle = vec![
+                p(-2.8, -1.0),
+                p(-2.8, -3.4),
+                p(-1.6, -4.8),
+                p(1.6, -4.8),
+                p(2.8, -3.4),
+                p(2.8, -1.0),
+            ];
+            painter.add(egui::Shape::line(shackle, thin));
+            let body = Rect::from_min_max(p(-4.4, -1.0), p(4.4, 5.0));
+            painter.rect_stroke(body, CornerRadius::same(1), stroke, StrokeKind::Middle);
+            painter.circle_filled(p(0.0, 2.0), 1.1 * s, fg);
+        }
     }
 }
 
@@ -664,7 +753,9 @@ pub fn icon_labeled_button(
     let right_pad = 10.0_f32;
     let desired = vec2(
         left_pad + gutter + label_galley.size().x + right_pad,
-        (label_galley.size().y + 8.0).max(24.0),
+        (label_galley.size().y + 8.0)
+            .max(ui.spacing().interact_size.y)
+            .max(24.0),
     );
     let resp = ui.add_enabled(enabled, egui::Button::new("").min_size(desired));
     if ui.is_rect_visible(resp.rect) {
@@ -721,7 +812,9 @@ pub fn icon_toggle_labeled_button(
     let right_pad = 10.0_f32;
     let desired = vec2(
         left_pad + gutter + label_galley.size().x + right_pad,
-        (label_galley.size().y + 8.0).max(24.0),
+        (label_galley.size().y + 8.0)
+            .max(ui.spacing().interact_size.y)
+            .max(24.0),
     );
     let mut btn = egui::Button::new("").min_size(desired);
     if active && enabled {
@@ -752,6 +845,51 @@ pub fn icon_toggle_labeled_button(
             resp.rect.center().y - label_galley.size().y * 0.5,
         );
         ui.painter().galley(label_pos, label_galley, text_color);
+    }
+    resp
+}
+
+/// Render a compact icon-only toggle pill button with active accent fill/stroke.
+pub fn icon_toggle_button(
+    ui: &mut Ui,
+    icon: IconKind,
+    active: bool,
+    enabled: bool,
+    accent: Color32,
+    min_size: egui::Vec2,
+    tooltip: &str,
+) -> Response {
+    let mut btn = egui::Button::new("").min_size(min_size);
+    if active && enabled {
+        btn = btn
+            .fill(accent.gamma_multiply(0.18))
+            .stroke(Stroke::new(1.0_f32, accent));
+    }
+    let resp = ui.add_enabled(enabled, btn).on_hover_text(tooltip);
+    if ui.is_rect_visible(resp.rect) {
+        let fg = if !enabled {
+            ui.visuals().weak_text_color()
+        } else if active {
+            accent
+        } else {
+            ui.visuals().text_color()
+        };
+        let fill_bg = if active && enabled {
+            accent.gamma_multiply(0.18)
+        } else if resp.hovered() && enabled {
+            ui.visuals().widgets.hovered.bg_fill
+        } else {
+            ui.visuals().widgets.inactive.bg_fill
+        };
+        let icon_size = (min_size.y - 12.0).clamp(12.0, ICON_SIZE_INLINE);
+        paint_icon(
+            ui.painter(),
+            icon,
+            resp.rect.center(),
+            fg,
+            fill_bg,
+            icon_size,
+        );
     }
     resp
 }

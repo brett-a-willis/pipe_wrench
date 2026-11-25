@@ -11,6 +11,77 @@
 
 use egui::{Color32, Context, CornerRadius, Frame, Margin, RichText, Stroke, Ui, Visuals};
 
+/// Unified single-line control height (`28.0 px`) across Filter bar and TCP/IP panel widgets.
+pub const CONTROL_HEIGHT: f32 = 28.0;
+/// Unified corner rounding (`6 px`) for buttons, inputs, dropdowns, and toggle pills.
+pub const CONTROL_CORNER_RADIUS: u8 = 6;
+/// Unified horizontal internal padding (`10.0 px`) for interactive controls.
+pub const CONTROL_PADDING_X: f32 = 10.0;
+/// Unified vertical internal padding (`5.0 px`) for interactive controls.
+pub const CONTROL_PADDING_Y: f32 = 5.0;
+/// Unified horizontal spacing (`8.0 px`) between controls in a row.
+pub const ROW_SPACING_X: f32 = 8.0;
+/// Unified vertical spacing (`6.0 px`) between control rows.
+pub const ROW_SPACING_Y: f32 = 6.0;
+
+/// Apply unified `28.0 px` control height, padding, and row spacing metrics to a scoped `Ui`.
+pub fn apply_unified_control_metrics(ui: &mut Ui) {
+    let spacing = ui.spacing_mut();
+    spacing.interact_size.y = CONTROL_HEIGHT;
+    spacing.button_padding = egui::vec2(CONTROL_PADDING_X, CONTROL_PADDING_Y);
+    spacing.item_spacing = egui::vec2(ROW_SPACING_X, ROW_SPACING_Y);
+    spacing.combo_height = 240.0;
+}
+
+/// Build a single-line [`egui::TextEdit`] normalized to [`CONTROL_HEIGHT`] (`28.0 px`) with
+/// consistent horizontal/vertical padding and vertical centering.
+pub fn styled_singleline_text_edit<'a>(
+    buf: &'a mut String,
+    width: f32,
+    hint: Option<&str>,
+) -> egui::TextEdit<'a> {
+    let mut edit = egui::TextEdit::singleline(buf)
+        .desired_width(width)
+        .min_size(egui::vec2(width, CONTROL_HEIGHT))
+        .margin(Margin::symmetric(8, 5))
+        .vertical_align(egui::Align::Center);
+    if let Some(h) = hint {
+        edit = edit.hint_text(h);
+    }
+    edit
+}
+
+/// Render a bordered text toggle pill (`Aa`, `!v`, `AND`, `OR`, etc.) normalized to
+/// `ui.spacing().interact_size.y` (at least [`CONTROL_HEIGHT`]) with `6 px` rounding and
+/// active accent highlight matching toolbar toggle buttons.
+pub fn toggle_pill_button(
+    ui: &mut Ui,
+    label: &str,
+    active: bool,
+    accent: Color32,
+) -> egui::Response {
+    let height = ui.spacing().interact_size.y.max(CONTROL_HEIGHT);
+    let text_color = if active {
+        accent
+    } else {
+        ui.visuals().text_color()
+    };
+    let text = if active {
+        RichText::new(label).strong().color(text_color)
+    } else {
+        RichText::new(label).color(text_color)
+    };
+    let mut btn = egui::Button::new(text)
+        .min_size(egui::vec2(height, height))
+        .corner_radius(CornerRadius::same(CONTROL_CORNER_RADIUS));
+    if active {
+        btn = btn
+            .fill(accent.gamma_multiply(0.18))
+            .stroke(Stroke::new(1.0_f32, accent));
+    }
+    ui.add(btn)
+}
+
 /// Theme-aware surface and semantic palette for the main application chrome (`D-26`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ThemePalette {
