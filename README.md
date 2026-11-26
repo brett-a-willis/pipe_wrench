@@ -73,7 +73,7 @@ pipe_wrench_cli send ./outbound.hl7 --host 127.0.0.1 --port 7772 --rewrite-contr
 
 ### PHI De-Identification (`scrub`)
 
-> **WARNING — Best-Effort De-Identification Only:** Automated PHI scrubbing CANNOT be 100% guaranteed to detect or remove all Protected Health Information (including custom Z-segments, unstructured clinical notes, or embedded attachments). You are solely responsible for manually inspecting and verifying all scrubbed output before sharing or using it outside a secure environment.
+> **Note:** Automated PHI scrubbing is best-effort only (custom Z-segments, unstructured notes, or embedded attachments may remain)—always inspect scrubbed output manually before sharing outside a secure environment.
 
 ---
 
