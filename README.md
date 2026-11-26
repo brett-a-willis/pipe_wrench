@@ -2,13 +2,11 @@
 
 **A fast, responsive desktop and CLI workbench for HL7® v2 (Health Level Seven® Version 2) interface troubleshooting and conversion projects.**
 
-> **⚠️ DISCLAIMER — NO WARRANTY & USE AT YOUR OWN RISK**
+> **⚠️ DISCLAIMER — USE AT YOUR OWN RISK**
 >
-> **This software is provided "AS IS", without warranty or guarantee of any kind, express or implied.** You use `pipe_wrench`, `pipe_wrench_cli`, and any messages, files, reports, or MLLP transmissions generated or modified by this tool **strictly at your own risk**.
+> **No Warranty & Production Safety:** `pipe_wrench` and `pipe_wrench_cli` are provided **"AS IS"**, without warranty or liability of any kind. Always validate parsed, scrubbed, or generated messages in a non-production test environment before sending them to any live EHR, interface engine, or clinical workflow—you are solely responsible for any downstream errors, outages, or data issues.
 >
-> **Do not send unverified output into a production EHR or live clinical environment.** If you use this tool or its output in a production EHR, interface engine, or clinical workflow and it causes data corruption, interface failures, downstream errors, or any other issues, **that is solely your responsibility**. The author(s) and contributors accept **no liability or responsibility** for any damages, outages, or consequences resulting from its use. Always validate outputs in a non-production/test environment before use.
->
-> **No Regulatory or Security Certification:** This software is a local desktop and CLI utility and is **not** certified, audited, or attested for HIPAA, HITRUST, SOC 2, or any other regulatory or compliance framework. It makes no compliance claims, and you are solely responsible for ensuring your environment, data handling, and security controls meet your organization's requirements.
+> **No Regulatory or Security Certification:** This local utility is **not** certified, audited, or attested for HIPAA, HITRUST, SOC 2, or any other compliance framework, and makes no compliance claims. You are solely responsible for ensuring your environment, PHI handling, and security controls meet your organization's requirements.
 
 ![pipe_wrench Dark Mode Screenshot](docs/screenshots/dark-mode.png)
 
