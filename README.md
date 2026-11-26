@@ -7,6 +7,8 @@
 > **This software is provided "AS IS", without warranty or guarantee of any kind, express or implied.** You use `pipe_wrench`, `pipe_wrench_cli`, and any messages, files, reports, or MLLP transmissions generated or modified by this tool **strictly at your own risk**.
 >
 > **Do not send unverified output into a production EHR or live clinical environment.** If you use this tool or its output in a production EHR, interface engine, or clinical workflow and it causes data corruption, interface failures, downstream errors, or any other issues, **that is solely your responsibility**. The author(s) and contributors accept **no liability or responsibility** for any damages, outages, or consequences resulting from its use. Always validate outputs in a non-production/test environment before use.
+>
+> **No Regulatory or Security Certification:** This software is a local desktop and CLI utility and is **not** certified, audited, or attested for HIPAA, HITRUST, SOC 2, or any other regulatory or compliance framework. It makes no compliance claims, and you are solely responsible for ensuring your environment, data handling, and security controls meet your organization's requirements.
 
 ![pipe_wrench Dark Mode Screenshot](docs/screenshots/dark-mode.png)
 
